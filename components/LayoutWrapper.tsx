@@ -9,7 +9,7 @@ export default function LayoutWrapper({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const hideNavbar = ["/", "/login", "/register"].includes(pathname)
+  const hideNavbar = ["/", "/login", "/register","/registration-success"].includes(pathname)
 
   return (
     <div className="min-h-screen flex flex-col">

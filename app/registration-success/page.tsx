@@ -125,7 +125,7 @@ export default function RegistrationSuccessPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Link href="/" className="w-full">
+            <Link href="/dashboard" className="w-full">
               <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
                 Start Your Journey <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
