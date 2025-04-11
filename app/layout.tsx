@@ -2,7 +2,8 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import LayoutWrapper from "@/components/LayoutWrapper" // 👈 import new wrapper
+import LayoutWrapper from "@/components/LayoutWrapper" 
+import { Toaster } from "react-hot-toast"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,6 +21,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} bg-gray-950 text-gray-100`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <Toaster position="bottom-right" reverseOrder={false} />
           <LayoutWrapper>{children}</LayoutWrapper>
         </ThemeProvider>
       </body>

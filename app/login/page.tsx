@@ -3,11 +3,11 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { toast } from "react-hot-toast"; // Import toast
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -28,11 +28,11 @@ export default function LoginPage() {
       });
 
       console.log("Login successful:", response.data);
-      alert("Login successful!");
-      router.push("/dashboard"); 
+      toast.success("Login successful!"); // Success toast
+      router.push("/dashboard");
     } catch (error: any) {
       console.error("Login failed:", error.response?.data || error.message);
-      alert(error.response?.data?.error || "Something went wrong!");
+      toast.error(error.response?.data?.error || "Something went wrong!"); // Error toast
     } finally {
       setIsLoading(false);
     }

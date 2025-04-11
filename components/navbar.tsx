@@ -25,7 +25,7 @@ export default function Navbar() {
   const pathname = usePathname()
 
   const navItems = [
-    { href: "/", label: "Home", icon: <Home className="h-4 w-4 mr-2" /> },
+    { href: "/dashboard", label: "Home", icon: <Home className="h-4 w-4 mr-2" /> },
     { href: "/matches", label: "Matches", icon: <Users className="h-4 w-4 mr-2" /> },
     { href: "/courses", label: "Courses", icon: <BookOpen className="h-4 w-4 mr-2" /> },
     { href: "/community", label: "Community", icon: <MessageSquare className="h-4 w-4 mr-2" /> },

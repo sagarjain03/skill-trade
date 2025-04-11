@@ -1,5 +1,5 @@
 "use client";
-
+import { toast } from "react-hot-toast"; // Import toast
 import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
@@ -48,7 +48,7 @@ export default function RegisterPage() {
     if (!agreedToTerms) return;
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
+      toast.error("Passwords do not match!");
       return;
     }
 
@@ -61,12 +61,11 @@ export default function RegisterPage() {
         password,
       });
 
-      
-      alert("Registration successful! Please check your email for verification.");
+      toast.success("Registration successful! Please check your email for verification.");
       router.push("/login");
     } catch (error: any) {
       console.error("Registration failed:", error.response?.data || error.message);
-      alert(error.response?.data?.error || "Something went wrong!");
+      toast.error(error.response?.data?.error || "Something went wrong!");
     } finally {
       setIsLoading(false);
     }
