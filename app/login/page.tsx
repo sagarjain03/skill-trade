@@ -29,7 +29,7 @@ export default function LoginPage() {
 
       console.log("Login successful:", response.data);
       toast.success("Login successful!"); // Success toast
-      router.push("/dashboard");
+      router.push("/registration-success");
     } catch (error: any) {
       console.error("Login failed:", error.response?.data || error.message);
       toast.error(error.response?.data?.error || "Something went wrong!"); // Error toast

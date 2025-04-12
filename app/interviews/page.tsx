@@ -1,110 +1,83 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { PlayCircle, Clock, CheckCircle, ArrowRight, Code, Briefcase, Calendar, Brain, Search } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PlayCircle, Clock, CheckCircle, ArrowRight, Code, Briefcase, Calendar, Brain, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import axios from "@/lib/axios"; // Import Axios instance
 
 // Types for interview data
 interface Interview {
-  id: string
-  userId: string
-  role: string
-  type: string
-  techstack: string[]
-  level: string
-  questions: string[]
-  finalized: boolean
-  createdAt: string
+  id: string;
+  userId: string;
+  role: string;
+  type: string;
+  techstack: string[];
+  level: string;
+  questions: string[];
+  finalized: boolean;
+  createdAt: string;
 }
 
 export default function InterviewsPage() {
-  const [showParticles, setShowParticles] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filterType, setFilterType] = useState<string | null>(null)
+  const [showParticles, setShowParticles] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<string | null>(null);
+  const [interviews, setInterviews] = useState<Interview[]>([]); // Replace dummyInterviews with fetched data
+  const [loading, setLoading] = useState(true);
 
-  // Dummy interview data
-  const dummyInterviews: Interview[] = [
-    {
-      id: "1",
-      userId: "user1",
-      role: "Frontend Developer",
-      type: "Technical",
-      techstack: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-      level: "Junior",
-      questions: ["What is React?", "Explain useState hook", "How does React rendering work?"],
-      finalized: false,
-      createdAt: "2024-03-15T10:00:00Z",
-    },
-    {
-      id: "2",
-      userId: "user1",
-      role: "Backend Developer",
-      type: "Technical",
-      techstack: ["Node.js", "Express", "MongoDB", "GraphQL"],
-      level: "Mid-level",
-      questions: ["What is Node.js?", "Explain RESTful APIs", "How does MongoDB work?"],
-      finalized: true,
-      createdAt: "2024-03-10T14:30:00Z",
-    },
-    {
-      id: "3",
-      userId: "user1",
-      role: "Full Stack Developer",
-      type: "Behavioral",
-      techstack: ["React", "Node.js", "PostgreSQL", "Docker"],
-      level: "Senior",
-      questions: [
-        "Tell me about a challenging project you worked on",
-        "How do you handle conflicts in a team?",
-        "Describe your ideal work environment",
-      ],
-      finalized: true,
-      createdAt: "2024-02-28T09:15:00Z",
-    },
-    {
-      id: "4",
-      userId: "user1",
-      role: "UI/UX Designer",
-      type: "Portfolio",
-      techstack: ["Figma", "Adobe XD", "Sketch", "User Research"],
-      level: "Mid-level",
-      questions: ["Walk me through your design process", "How do you incorporate user feedback?"],
-      finalized: false,
-      createdAt: "2024-03-05T11:45:00Z",
-    },
-  ]
+  // Fetch interviews from the API
+  useEffect(() => {
+    const fetchInterviews = async () => {
+      try {
+        const response = await axios.get("/interviews");
+        if (response.data.success) {
+          setInterviews(response.data.interviews);
+        }
+      } catch (error) {
+        console.error("Failed to fetch interviews:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInterviews();
+  }, []);
 
   // Filter interviews based on search query and filter type
-  const filteredInterviews = dummyInterviews.filter((interview) => {
+  const filteredInterviews = interviews.filter((interview) => {
     const matchesSearch =
       interview.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
       interview.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       interview.level.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      interview.techstack.some((tech) => tech.toLowerCase().includes(searchQuery.toLowerCase()))
+      interview.techstack.some((tech) => tech.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesType = filterType ? interview.type === filterType : true
+    const matchesType = filterType ? interview.type === filterType : true;
 
-    return matchesSearch && matchesType
-  })
+    return matchesSearch && matchesType;
+  });
 
   // Format date
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
 
   useEffect(() => {
     // Delay the particles animation for a smoother load
     const timer = setTimeout(() => {
-      setShowParticles(true)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [])
+      setShowParticles(true);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <div className="text-center text-gray-400">Loading interviews...</div>;
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -239,8 +212,8 @@ export default function InterviewsPage() {
                           interview.type === "Technical"
                             ? "bg-blue-500/20 text-blue-400"
                             : interview.type === "Behavioral"
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-amber-500/20 text-amber-400",
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-amber-500/20 text-amber-400",
                         )}
                       >
                         {interview.type}
@@ -326,8 +299,8 @@ export default function InterviewsPage() {
                     variant="outline"
                     className="border-gray-700"
                     onClick={() => {
-                      setSearchQuery("")
-                      setFilterType(null)
+                      setSearchQuery("");
+                      setFilterType(null);
                     }}
                   >
                     Clear Filters
@@ -337,14 +310,14 @@ export default function InterviewsPage() {
             </Card>
           )}
 
-          {filteredInterviews.length > 0 && filteredInterviews.length < dummyInterviews.length && (
+          {filteredInterviews.length > 0 && filteredInterviews.length < interviews.length && (
             <div className="mt-4 text-center">
               <Button
                 variant="outline"
                 className="border-gray-700"
                 onClick={() => {
-                  setSearchQuery("")
-                  setFilterType(null)
+                  setSearchQuery("");
+                  setFilterType(null);
                 }}
               >
                 Clear Filters
@@ -365,7 +338,7 @@ export default function InterviewsPage() {
                   <Brain className="h-5 w-5 text-blue-400" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">{dummyInterviews.length}</div>
+                  <div className="text-2xl font-bold">{interviews.length}</div>
                   <div className="text-xs text-gray-400">Total Interviews</div>
                 </div>
               </div>
@@ -376,7 +349,7 @@ export default function InterviewsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">
-                    {dummyInterviews.filter((interview) => interview.finalized).length}
+                    {interviews.filter((interview) => interview.finalized).length}
                   </div>
                   <div className="text-xs text-gray-400">Completed</div>
                 </div>
@@ -388,7 +361,7 @@ export default function InterviewsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">
-                    {dummyInterviews.filter((interview) => !interview.finalized).length}
+                    {interviews.filter((interview) => !interview.finalized).length}
                   </div>
                   <div className="text-xs text-gray-400">In Progress</div>
                 </div>
@@ -400,7 +373,7 @@ export default function InterviewsPage() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">
-                    {dummyInterviews.filter((interview) => interview.type === "Technical").length}
+                    {interviews.filter((interview) => interview.type === "Technical").length}
                   </div>
                   <div className="text-xs text-gray-400">Technical Interviews</div>
                 </div>
@@ -410,5 +383,5 @@ export default function InterviewsPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

@@ -47,10 +47,10 @@ const interviewSchema: Schema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // Automatically adds `createdAt` and `updatedAt` fields
+    timestamps: true, 
   }
 );
+const Interview = mongoose.models.Interview || mongoose.model("Interview", interviewSchema);
 
-const Interview = mongoose.model<IInterview>("Interview", interviewSchema);
 
 export default Interview;
