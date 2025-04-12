@@ -1,3 +1,4 @@
+"use client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +7,8 @@ import { Award, BookOpen, Users, Zap, Settings, Edit, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import axios from "axios";
+import { useState,useEffect } from "react"
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -25,7 +28,24 @@ const rankBorderColors = {
   Beginner: "border-gray-500",
 }
 
+
 export default function ProfilePage() {
+  const [username, setUsername] = useState("");
+
+  // Fetch the username from the profile route
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get("/api/users/profile");
+        setUsername(response.data.user.username); 
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+  
+    fetchProfile();
+  }, []);
+
   const rank = "B"
   const nextRank = "A"
   const xpCurrent = 2450
@@ -67,7 +87,7 @@ export default function ProfilePage() {
                     <Edit className="h-3 w-3" />
                   </Button>
                 </div>
-                <h2 className="text-xl font-bold">SkillMaster42</h2>
+                <h2 className="text-xl font-bold">{username || "Loading..."}</h2>
                 <p className="text-sm text-gray-400 mb-2">Joined 3 months ago</p>
                 <div className="flex flex-wrap justify-center gap-1 mb-4">
                   <Badge variant="outline" className="bg-gray-800">

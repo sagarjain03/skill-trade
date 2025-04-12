@@ -9,6 +9,7 @@ import { Award, BookOpen, Users, Zap, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import axios from "axios"
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -31,6 +32,7 @@ const rankBorderColors = {
 export default function UserDashboard() {
   const [progress, setProgress] = useState(65)
   const [showLevelUp, setShowLevelUp] = useState(false)
+  const [username, setUsername] = useState("")
   const rank = "B"
   const nextRank = "A"
   const xpCurrent = 2450
@@ -63,6 +65,22 @@ export default function UserDashboard() {
       return () => clearTimeout(timer)
     }
   }, [showLevelUp])
+
+
+  // Fetch the username from the profile route
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get("/api/users/profile");
+        setUsername(response.data.user.username);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
 
   return (
     <div className="mb-12">
@@ -100,7 +118,7 @@ export default function UserDashboard() {
                 </div>
               </div>
               <div className="ml-4">
-                <h3 className="font-bold">SkillMaster42</h3>
+                <h3 className="font-bold">{username||"Loading..."}</h3>
                 <p className="text-sm text-gray-400">Joined 3 months ago</p>
                 <div className="flex mt-1 space-x-1">
                   <Badge variant="outline" className="bg-gray-800 text-xs">
