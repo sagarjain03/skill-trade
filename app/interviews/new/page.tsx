@@ -1,50 +1,65 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { Brain, Code, PlayCircle, Plus, X } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Brain, Code, PlayCircle, Plus, X } from "lucide-react";
+import axios from "@/lib/axios"; // Import Axios instance
 
 export default function NewInterviewPage() {
-  const router = useRouter()
-  const [role, setRole] = useState("")
-  const [type, setType] = useState("Technical")
-  const [level, setLevel] = useState("Junior")
-  const [techStack, setTechStack] = useState<string[]>([])
-  const [newTech, setNewTech] = useState("")
-  const [additionalInfo, setAdditionalInfo] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [role, setRole] = useState("");
+  const [type, setType] = useState("Technical");
+  const [level, setLevel] = useState("Junior");
+  const [techStack, setTechStack] = useState<string[]>([]);
+  const [newTech, setNewTech] = useState("");
+  const [additionalInfo, setAdditionalInfo] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAddTech = () => {
     if (newTech.trim() && !techStack.includes(newTech.trim())) {
-      setTechStack([...techStack, newTech.trim()])
-      setNewTech("")
+      setTechStack([...techStack, newTech.trim()]);
+      setNewTech("");
     }
-  }
+  };
 
   const handleRemoveTech = (tech: string) => {
-    setTechStack(techStack.filter((t) => t !== tech))
-  }
+    setTechStack(techStack.filter((t) => t !== tech));
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      router.push("/interviews")
-    }, 1500)
-  }
+    try {
+      const response = await axios.post("/interviews", {
+        role,
+        type,
+        level,
+        techstack: techStack,
+        additionalInfo,
+      });
+
+      if (response.data.success) {
+        router.push("/interviews");
+      } else {
+        console.error("Failed to create interview:", response.data.error);
+      }
+    } catch (error) {
+      console.error("Error creating interview:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-950">
@@ -130,8 +145,8 @@ export default function NewInterviewPage() {
                         onChange={(e) => setNewTech(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
-                            e.preventDefault()
-                            handleAddTech()
+                            e.preventDefault();
+                            handleAddTech();
                           }
                         }}
                       />
@@ -236,5 +251,5 @@ export default function NewInterviewPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
