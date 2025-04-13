@@ -1,19 +1,55 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlayCircle, Clock, CheckCircle, Code, Briefcase, Calendar, Brain, Search, Loader2 } from "lucide-react"
+import {
+  PlayCircle,
+  Clock,
+  CheckCircle,
+  Code,
+  Briefcase,
+  Calendar,
+  Brain,
+  Search,
+  Loader2,
+  X,
+  AlertTriangle,
+  Pencil,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import axios from "@/lib/axios" // Import Axios instance
+import axios from "@/lib/axios"
 import { useParams, useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Types for interview data
 interface Interview {
-  id: string
+  _id: string
   userId: string
   role: string
   type: string
@@ -24,6 +60,14 @@ interface Interview {
   createdAt: string
 }
 
+// Form data type for editing
+interface InterviewFormData {
+  role: string
+  type: string
+  level: string
+  techstack: string
+}
+
 export default function InterviewsPage() {
   const params = useParams()
   const [showParticles, setShowParticles] = useState(false)
@@ -31,15 +75,30 @@ export default function InterviewsPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<string | null>(null)
-  const [interviews, setInterview] = useState<Interview[]>([]) // Replace dummyInterviews with fetched data
+  const [interviews, setInterview] = useState<Interview[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+
+  // State for edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [currentInterview, setCurrentInterview] = useState<Interview | null>(null)
+  const [formData, setFormData] = useState<InterviewFormData>({
+    role: "",
+    type: "",
+    level: "",
+    techstack: "",
+  })
+
+  // State for delete confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [interviewToDelete, setInterviewToDelete] = useState<string | null>(null)
 
   // Fetch interviews from the API
   useEffect(() => {
     const fetchInterviews = async () => {
       try {
         const response = await axios.get("/interviews")
+        console.log(response.data)
         if (response.data.success) {
           setInterview(response.data.interviews)
         }
@@ -53,21 +112,61 @@ export default function InterviewsPage() {
     fetchInterviews()
   }, [])
 
-  const handleUpdate = async (id: string) => {
-    const confirmed = confirm("Are you sure you want to update this interview?")
-    if (!confirmed) return
+  // Open edit modal with interview data
+  const openEditModal = (interview: Interview) => {
+    setCurrentInterview(interview)
+    setFormData({
+      role: interview.role,
+      type: interview.type,
+      level: interview.level,
+      techstack: interview.techstack.join(", "),
+    })
+    setEditModalOpen(true)
+  }
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  // Handle select changes
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!currentInterview) return
 
     setIsUpdating(true)
     try {
-      const response = await axios.put(`/interviews/${id}`, {
-        role: "Updated Role", // Modify with form or prompt if needed
-        type: "Updated Type",
+      // Convert techstack string to array
+      const techstackArray = formData.techstack
+        .split(",")
+        .map((tech) => tech.trim())
+        .filter((tech) => tech !== "")
+
+      const response = await axios.put(`/interviews/${currentInterview._id}`, {
+        role: formData.role,
+        type: formData.type,
+        level: formData.level,
+        techstack: techstackArray,
       })
 
       if (response.data.success) {
         // Update the interview in the local state
-        setInterview((prev) => prev.map((int) => (int.id === id ? response.data.interview : int)))
-        alert("Interview updated successfully!")
+        setInterview((prev) =>
+          prev.map((int) => (int._id === currentInterview._id ? { ...int, ...response.data.interview } : int)),
+        )
+        setEditModalOpen(false)
       } else {
         console.error("Failed to update interview:", response.data.error)
       }
@@ -78,16 +177,22 @@ export default function InterviewsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    const confirmed = confirm("Are you sure you want to delete this interview? This action cannot be undone.")
-    if (!confirmed) return
+  // Open delete confirmation dialog
+  const openDeleteDialog = (id: string) => {
+    setInterviewToDelete(id)
+    setDeleteDialogOpen(true)
+  }
 
-    setIsDeleting(id)
+  // Handle delete confirmation
+  const handleDelete = async () => {
+    if (!interviewToDelete) return
+
+    setIsDeleting(interviewToDelete)
     try {
-      const response = await axios.delete(`/interviews/${id}`)
+      const response = await axios.delete(`/interviews/${interviewToDelete}`)
       if (response.data.success) {
         // Remove the deleted interview from local state
-        setInterview((prev) => prev.filter((int) => int.id !== id))
+        setInterview((prev) => prev.filter((int) => int._id !== interviewToDelete))
       } else {
         console.error("Failed to delete interview:", response.data.error)
       }
@@ -95,6 +200,8 @@ export default function InterviewsPage() {
       console.error("Error deleting interview:", error)
     } finally {
       setIsDeleting(null)
+      setDeleteDialogOpen(false)
+      setInterviewToDelete(null)
     }
   }
 
@@ -307,7 +414,7 @@ export default function InterviewsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredInterviews.map((interview) => (
                 <Card
-                  key={interview.id}
+                  key={interview._id}
                   className="bg-gray-900 border-gray-800 hover:border-purple-500/50 transition-all duration-200 overflow-hidden"
                 >
                   <div
@@ -366,7 +473,7 @@ export default function InterviewsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => router.push(`/interviews/${interview.id}`)}
+                      onClick={() => router.push(`/interviews/${interview._id}`)}
                       className="flex-1 border-gray-700 hover:bg-gray-800"
                     >
                       View
@@ -375,20 +482,18 @@ export default function InterviewsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleUpdate(interview.id)}
-                        disabled={isUpdating}
+                        onClick={() => openEditModal(interview)}
                         className="border-blue-500/50 text-blue-400 hover:bg-blue-950 hover:text-blue-300"
                       >
-                        {isUpdating ? <Loader2 className="h-3 w-3 animate-spin" /> : "Edit"}
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(interview.id)}
-                        disabled={isDeleting === interview.id}
+                        onClick={() => openDeleteDialog(interview._id)}
                         className="border-red-500/50 text-red-400 hover:bg-red-950 hover:text-red-300"
                       >
-                        {isDeleting === interview.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Delete"}
+                        <X className="h-3 w-3 mr-1" /> Delete
                       </Button>
                     </div>
                   </CardFooter>
@@ -556,6 +661,118 @@ export default function InterviewsPage() {
             </Card>
           </div>
         </div>
+
+        {/* Edit Interview Modal */}
+        <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Interview</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Update the details of your interview session.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role/Position</Label>
+                  <Input
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    className="bg-gray-800 border-gray-700 focus:border-purple-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="type">Interview Type</Label>
+                  <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)} required>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 focus:border-purple-500">
+                      <SelectValue placeholder="Select interview type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="Technical">Technical</SelectItem>
+                      <SelectItem value="Behavioral">Behavioral</SelectItem>
+                      <SelectItem value="Portfolio">Portfolio</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="level">Experience Level</Label>
+                  <Select value={formData.level} onValueChange={(value) => handleSelectChange("level", value)} required>
+                    <SelectTrigger className="bg-gray-800 border-gray-700 focus:border-purple-500">
+                      <SelectValue placeholder="Select experience level" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="Entry">Entry Level</SelectItem>
+                      <SelectItem value="Mid">Mid Level</SelectItem>
+                      <SelectItem value="Senior">Senior Level</SelectItem>
+                      <SelectItem value="Lead">Lead/Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="techstack">Tech Stack (comma separated)</Label>
+                  <Textarea
+                    id="techstack"
+                    name="techstack"
+                    value={formData.techstack}
+                    onChange={handleInputChange}
+                    className="bg-gray-800 border-gray-700 focus:border-purple-500 min-h-20"
+                    placeholder="React, Node.js, MongoDB, etc."
+                  />
+                  <p className="text-xs text-gray-500">Enter technologies separated by commas</p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-gray-700"
+                  onClick={() => setEditModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating} className="bg-purple-600 hover:bg-purple-700">
+                  {isUpdating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent className="bg-gray-900 border-gray-800 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+                Confirm Deletion
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-gray-400">
+                Are you sure you want to delete this interview? This action cannot be undone and all associated data
+                will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting !== null}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Delete Interview
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )

@@ -7,12 +7,14 @@ import { getDataFromToken } from "@/helpers/getDataFromToken";
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   await connectDB();
 
-  const userId = await getDataFromToken(request);
+  const userId = getDataFromToken(request);
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const id = params?.id; // Ensure params is destructured properly
+  const id = params?.id; 
+  console.log("id ye rhi sagar",id);
+  
   if (!id) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
@@ -40,7 +42,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const id = params?.id; // Ensure params is destructured properly
+  const id = params?.id; 
+  console.log("id ye rhi sagar",id);
   if (!id) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
@@ -64,7 +67,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE: Delete a specific interview
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+// import { NextRequest, NextResponse } from "next/server";
+// import { connectDB } from "@/utils/db";
+// import { getDataFromToken } from "@/utils/getDataFromToken";
+// import Interview from "@/models/interviewModel";
+
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   await connectDB();
 
   const userId = await getDataFromToken(request);
@@ -72,7 +80,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const id = params?.id; // Ensure params is destructured properly
+  const id = context.params.id;
+  console.log("ye hai tera params sagar ",context.params)
   if (!id) {
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
