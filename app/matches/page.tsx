@@ -7,11 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Sparkles, ArrowRight, Check, X, MessageCircle, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAppSelector } from "@/lib/redux/hooks"
 
 export default function MatchesPage() {
   const [showMatch, setShowMatch] = useState(false)
   const [confetti, setConfetti] = useState(false)
   const [activeTab, setActiveTab] = useState("find")
+
+  const currentUser = useAppSelector((state) => state.user.currentUser)
 
   useEffect(() => {
     // Simulate a match after 3 seconds if on the find tab
@@ -29,6 +32,11 @@ export default function MatchesPage() {
       return () => clearTimeout(timer)
     }
   }, [activeTab])
+
+
+  const handleAcceptMatch = () => {
+    console.log("Current user data:", currentUser)
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 relative">
@@ -106,7 +114,7 @@ export default function MatchesPage() {
                         ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                         : "bg-gray-800 hover:bg-gray-700",
                     )}
-                    onClick={() => setActiveTab("find")}
+                    onClick={handleAcceptMatch}
                   >
                     Find Matches
                   </Button>
@@ -306,7 +314,7 @@ export default function MatchesPage() {
                         </div>
 
                         <div className="flex space-x-3 mt-4">
-                          <Button className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+                          <Button onClick={handleAcceptMatch} className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
                             <Check className="mr-2 h-4 w-4" /> Accept Match
                           </Button>
                           <Button variant="outline" className="flex-1 border-gray-700">
