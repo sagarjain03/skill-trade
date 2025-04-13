@@ -8,7 +8,7 @@ import { Toaster } from "react-hot-toast"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "SkillQuest - Gamified Skill Trading",
+  title: "SkillTrade - Gamified Skill Trading",
   description: "Learn and teach skills in a fun, gamified environment",
 }
 

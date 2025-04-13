@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { toast } from "react-hot-toast"; // Import toast
+import { toast } from "react-hot-toast"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +59,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md z-10">
         <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500 bg-clip-text text-transparent">
-          SkillQuest
+          SkillTrade
         </h1>
         <p className="text-gray-400 text-center mb-8">Login to continue your skill trading journey</p>
 

@@ -93,7 +93,7 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-md z-10">
         <h1 className="text-3xl font-bold text-center mb-2 bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500 bg-clip-text text-transparent">
-          Join SkillQuest
+          Join SkillTrade
         </h1>
         <p className="text-gray-400 text-center mb-8">Create an account to start your skill trading adventure</p>
 
