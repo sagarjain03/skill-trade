@@ -17,6 +17,7 @@ import {
   Brain,
   MessageSquare,
   LogOut,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,6 +44,7 @@ export default function Navbar() {
     { href: "/courses", label: "Courses", icon: <BookOpen className="h-4 w-4 mr-2" /> },
     { href: "/community", label: "Community", icon: <MessageSquare className="h-4 w-4 mr-2" /> },
     { href: "/challenges", label: "Challenges", icon: <Brain className="h-4 w-4 mr-2" /> },
+    { href: "/interviews", label: "Interviews", icon: <Mic className="h-4 w-4 mr-2" /> },
   ];
 
   // Fetch the username from the profile route

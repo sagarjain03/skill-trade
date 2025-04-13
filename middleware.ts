@@ -36,5 +36,6 @@ export const config = {
     '/community/:path*',
     '/challenges/:path*',
     '/sessions/:path*',
+    '/interviews/:path*',
   ],
 };
