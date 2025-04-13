@@ -10,12 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, KeyRound, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/lib/redux/hooks";
+import { setUser } from "@/lib/redux/features/UserData/userDataSlice";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +32,14 @@ export default function LoginPage() {
 
       console.log("Login successful:", response.data);
       toast.success("Login successful!"); // Success toast
+
+      // Extract user data from the response and add token if needed
+      const userData = { ...response.data.user, token: response.data.token };
+
+      // Dispatch the user data to Redux so it is global
+      dispatch(setUser(userData));
+
+      
       router.push("/registration-success");
     } catch (error: any) {
       console.error("Login failed:", error.response?.data || error.message);
