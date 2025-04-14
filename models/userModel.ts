@@ -33,6 +33,16 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+
+    skillsToTeach: {
+        type: [String],
+    },
+    skillsToLearn: {    
+        type: [String],
+    },
+
+
+    
     forgotPasswordToken: String,
     forgotPasswordTokenExpiry: Date,
     verifyToken: String,

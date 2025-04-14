@@ -22,6 +22,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const router = useRouter();
+  const [skillsToTeach, setSkillsToTeach] = useState<string[]>([]); // Correctly destructure state
+  const [skillsToLearn, setSkillsToLearn] = useState<string[]>([]); // Correctly destructure state
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newPassword = e.target.value;
@@ -59,6 +61,8 @@ export default function RegisterPage() {
         username,
         email,
         password,
+        skillsToTeach,
+        skillsToLearn
       });
 
       toast.success("Registration successful! Please check your email for verification.");
