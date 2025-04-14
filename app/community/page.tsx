@@ -10,6 +10,9 @@ import { MessageSquare, ThumbsUp, MessageCircle, Plus, Send, X } from "lucide-re
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useDispatch, useSelector } from "react-redux";
+import { toggleLike, syncLikedPosts } from "@/lib/redux/features/CommunityData/communitySlice";
+import { RootState } from "@/lib/redux/store";
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -30,12 +33,19 @@ const rankBorderColors = {
 };
 
 export default function CommunityPage() {
-  const [newPost, setNewPost] = useState("");
   interface Post {
     _id: string;
     content: string;
     likes: number;
-    comments: any[];
+    isLiked: boolean;
+    comments: {
+      content: string;
+      user: {
+        username: string;
+        profilePic: string;
+      };
+      createdAt: string;
+    };
     tags: string[];
     user: {
       username: string;
@@ -46,19 +56,29 @@ export default function CommunityPage() {
   }
 
 
+  const [newPost, setNewPost] = useState("");
   const [tags, setTags] = useState<string[]>([]); // State for tags
   const [tagInput, setTagInput] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
-  const [likedPosts, setLikedPosts] = useState<number[]>([]);
+  // const [likedPosts, setLikedPosts] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<any>(null); // Track the selected post for comments
+  const [selectedPost, setSelectedPost] = useState<string | null>(null); // Track the selected post for comments
   const [commentInput, setCommentInput] = useState(""); // Input for adding a comment
+
+
+  const dispatch = useDispatch();
+  const likedPosts = useSelector((state: RootState) => state.community.likedPosts);
+
 
   // Fetch posts from the backend
   const fetchPosts = async () => {
     try {
       const response = await axios.get("/api/community/posts");
       setPosts(response.data.posts);
+      // Extract the IDs of posts that the current user has liked
+      if (response.data.likedPostsMap) {
+        dispatch(syncLikedPosts(response.data.likedPostsMap));
+      }
       setIsLoading(false);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -81,32 +101,66 @@ export default function CommunityPage() {
     setTags((prevTags) => prevTags.filter((t) => t !== tag));
   };
 
-  const handleLike = async (postId: string) => {
+  const handleLike = async (postid: string) => {
     try {
-      const post = posts.find((p: any) => p._id === postId);
-      if (!post) return;
+      // const post = posts.find((p: any) => p._id === postid);
+      // if (!post) return;
 
       // Optimistically update the likes count
-      const updatedLikes = post.likes + 1;
+      dispatch(toggleLike(postid));
 
-      setPosts((prevPosts) =>
-        prevPosts.map((p: any) =>
-          p._id === postId ? { ...p, likes: updatedLikes } : p
-        )
+
+      setPosts(prevPosts =>
+        prevPosts.map(post => {
+          if (post._id === postid) {
+            const newIsLiked = !Boolean(likedPosts[postid]);
+            return {
+              ...post,
+              likes: newIsLiked ? post.likes + 1 : Math.max(0, post.likes - 1),
+              isLiked: newIsLiked
+            };
+          }
+          return post;
+        })
       );
 
+      // setPosts((prevPosts) =>
+      //   prevPosts.map((p: any) =>
+      //     p._id === postid ? { ...p, likes: updatedLikes } : p
+      //   )
+      // );
+
       // Send the like request to the backend
-      await axios.post(`/api/community/posts/${postId}/likes`);
-    } catch (error) {
+      const response = await axios.post(`/api/community/posts/${postid}/likes`);
+
+      // Update the post's like count locally with data from the response
+      if (response.data.success) {
+        setPosts(prevPosts =>
+          prevPosts.map(post => {
+            if (post._id === postid) {
+              return {
+                ...post,
+                likes: response.data.likes,
+                isLiked: response.data.liked
+              };
+            }
+            return post;
+          })
+        );
+      }
+    }
+    catch (error) {
       console.error("Error liking post:", error);
+      dispatch(toggleLike(postid));
+      fetchPosts(); // Re-fetch posts to ensure the UI is in sync with the server
     }
   };
 
-  const handleAddComment = async (postId: string, commentText: string) => {
+  const handleAddComment = async (postid: string, commentText: string) => {
     if (!commentText.trim()) return;
 
     try {
-      const response = await axios.post(`/api/community/posts/${postId}/comments`, {
+      const response = await axios.post(`/api/community/posts/${postid}/comments`, {
         text: commentText,
       });
 
@@ -115,7 +169,7 @@ export default function CommunityPage() {
       // Update the comments for the specific post
       setPosts((prevPosts) =>
         prevPosts.map((post) =>
-          post._id === postId ? { ...post, comments: updatedComments } : post
+          post._id === postid ? { ...post, comments: updatedComments } : post
         )
       );
 
@@ -125,20 +179,19 @@ export default function CommunityPage() {
     }
   };
 
-  const handleViewComments = async (postId: string) => {
+  const handleViewComments = async (postid: string) => {
     try {
-      console.log("Attempting to fetch post:", postId);
-      const response = await axios.get(`/api/community/posts/${postId}`);
+      console.log("Attempting to fetch post:", postid);
+      const response = await axios.get(`/api/community/posts/${postid}`);
       console.log("Post data received:", response.data);
       setSelectedPost(response.data.post); // Set the selected post with comments
+      setSelectedPost(prev => prev === postid ? null : postid);
+      setCommentInput("");
     } catch (error) {
       console.error("Error fetching comments:", error);
     }
   };
 
-  const handleCloseComments = () => {
-    setSelectedPost(null); // Close the comments section
-  };
 
   const handleCreatePost = async () => {
     if (!newPost.trim()) return;
@@ -232,7 +285,7 @@ export default function CommunityPage() {
                 key={post._id}
                 className={cn(
                   "bg-gray-900 border-gray-800 transition-all duration-300",
-                  likedPosts.includes(post._id) && "ring-1 ring-green-500/50"
+                  likedPosts[post._id] && "ring-1 ring-green-500/50"
                 )}
               >
                 <CardHeader className="pb-2">
@@ -252,14 +305,19 @@ export default function CommunityPage() {
                           <span className="font-medium text-sm">{post.user.username}</span>
                           <div
                             className={cn(
-                              "ml-1 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold bg-gradient-to-br",
+                              "ml-1 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br",
                               rankColors[post.user.rank as keyof typeof rankColors]
                             )}
                           >
-                            {post.user.rank}
+                            {post.user.rank.substring(0, 2)} {/* Display the rank inside the circle */}
                           </div>
                         </div>
-                        <span className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleString()}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(post.createdAt).toLocaleString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -279,7 +337,7 @@ export default function CommunityPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className={cn("text-xs flex items-center", likedPosts.includes(post._id) && "text-green-400")}
+                      className={cn("text-xs flex items-center", likedPosts[post._id] && "text-green-400")}
                       onClick={() => handleLike(post._id)}
                     >
                       <ThumbsUp className="h-3 w-3 mr-1" />
@@ -289,58 +347,95 @@ export default function CommunityPage() {
                       variant="ghost"
                       size="sm"
                       className="text-xs flex items-center"
-                      onClick={() => handleViewComments(post._id)}
+                      onClick={() => setSelectedPost((prev) => (prev === post._id ? null : post._id))} // Toggle comments
                     >
                       <MessageCircle className="h-3 w-3 mr-1" />
                       {post.comments?.length || 0}
                     </Button>
                   </div>
                 </CardFooter>
+                {selectedPost === post._id && (
+                  <div className="px-4 pb-4 pt-0">
+                    <div className="border-t border-gray-800 pt-4 space-y-4">
+                      {/* Comments Header */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-semibold">Comments</h3>
+                      </div>
+
+                      {/* Existing Comments */}
+                      {post.comments
+                        ?.slice() // Create a shallow copy of the comments array
+                        .reverse() // Reverse the order to show the latest comments first
+                        .map((comment: any, index: number) => (
+                          <div key={index} className="flex items-start space-x-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={comment.user?.profilePic || "/placeholder.svg"} />
+                              <AvatarFallback>
+                                {comment.user?.username?.substring(0, 2) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center">
+                                <p className="text-sm font-medium">{comment.user?.username || "Anonymous"}</p>
+                                <div
+                                  className={cn(
+                                    "ml-2 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br",
+                                    rankColors[comment.user?.rank as keyof typeof rankColors]
+                                  )}
+                                >
+                                  {comment.user?.rank?.substring(0, 2) || ""}
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-400">{comment.content}</p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(comment.createdAt).toLocaleString(undefined, {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+
+                      {/* Comment Input */}
+                      <div className="flex space-x-2">
+                        {/* <Avatar className="h-6 w-6">
+                          <AvatarImage src="/placeholder.svg" alt="Your avatar" />
+                          <AvatarFallback>YO</AvatarFallback>
+                        </Avatar> */}
+                        <div className="flex-1">
+                          <Textarea
+                            placeholder="Write a comment..."
+                            className="bg-gray-800 border-gray-700 focus:border-green-500 min-h-8 text-xs py-2"
+                            rows={2}
+                            value={commentInput}
+                            onChange={(e) => setCommentInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleAddComment(post._id, commentInput);
+                              }
+                            }}
+                          />
+                          <div className="flex justify-end mt-2">
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                              onClick={() => handleAddComment(post._id, commentInput)}
+                            >
+                              Comment
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </Card>
             ))
           )}
         </div>
 
-        {selectedPost && (
-          <div className="lg:col-span-1 bg-gray-900 border-gray-800 p-4 rounded-lg">
-            <h2 className="text-lg font-bold mb-4">Comments</h2>
-            <div className="space-y-4">
-              {selectedPost.comments.map((comment: any, index: number) => (
-                <div key={index} className="flex items-start space-x-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={comment.user.profilePic || "/placeholder.svg"} alt={comment.user.username} />
-                    <AvatarFallback>{comment.user.username.substring(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{comment.user.username}</p>
-                    <p className="text-xs text-gray-400">{comment.text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Input
-                placeholder="Write a comment..."
-                className="bg-gray-800 border-gray-700 focus:border-green-500 text-xs"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleAddComment(selectedPost._id, commentInput);
-                  }
-                }}
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 text-xs border-gray-700 bg-gray-800"
-              onClick={handleCloseComments}
-            >
-              Close Comments
-            </Button>
-          </div>
-        )}
 
         <div className="space-y-6">
           <Card className="bg-gray-900 border-gray-800">
