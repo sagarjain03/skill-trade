@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest) {
 
     // Parse the request body
     const reqBody = await request.json();
-    const { username, email, skillsToTeach, skillsToLearn } = reqBody;
+    const { username, email, skillsToTeach, skillsToLearn, currentlyLearning } = reqBody;
 
     // Find and update the user
     const updatedUser = await User.findOneAndUpdate(
@@ -37,6 +37,7 @@ export async function PATCH(request: NextRequest) {
         ...(email && { email }),
         ...(skillsToTeach && { skillsToTeach }),
         ...(skillsToLearn && { skillsToLearn }),
+        ...(currentlyLearning && { currentlyLearning }),
       },
       { new: true, runValidators: true } // Return the updated document and validate the input
     ).select("-password -verifyToken -verifyTokenExpiry -__v");

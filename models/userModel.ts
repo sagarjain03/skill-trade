@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema({
         type: [String],
     },
 
+    currentlyLearning: {
+        type: String,
+        default: "",
+    },
+
 
     
     forgotPasswordToken: String,
