@@ -19,7 +19,13 @@ const communityPostSchema = new mongoose.Schema(
     content: { type: String, required: true },
     tags: { type: [String], default: [] },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    rank: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    profilePic: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     likes: { type: Number, default: 0 },
+    likedBy: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    }],
     comments: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
