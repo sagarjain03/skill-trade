@@ -55,12 +55,12 @@ export default function WelcomePage() {
           <div className="absolute inset-0 bg-purple-600 rounded-2xl rotate-45 transform origin-center"></div>
           <div className="absolute inset-2 bg-blue-500 rounded-xl rotate-12 transform origin-center"></div>
           <div className="absolute inset-4 bg-gray-900 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-3xl">SQ</span>
+            <span className="text-white font-bold text-3xl">ST</span>
           </div>
         </div>
 
         <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500 bg-clip-text text-transparent">
-          SkillQuest
+          SkillTrade
         </h1>
         <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl">
           Level up your skills through gamified learning and teaching

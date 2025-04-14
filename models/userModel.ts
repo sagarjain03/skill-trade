@@ -15,6 +15,16 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, "Please provide a password"],
     },
+    // rank: {
+    //     type: String,
+    //     enum: ["Beginner", "D", "C", "B", "A", "S"],
+    //     default: "Beginner",
+    //   },
+
+    // profilePic: {
+    //     type: String,
+    //     default: ""
+    //   },
     isVerified: {
         type: Boolean,
         default: false,
@@ -39,6 +49,6 @@ const userSchema = new mongoose.Schema({
     verifyTokenExpiry: Date,
 })
 
-const User = mongoose.models.users || mongoose.model("users", userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 export default User;
