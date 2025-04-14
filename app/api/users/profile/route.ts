@@ -16,3 +16,37 @@ export async function GET(request:NextRequest){
   }
   return NextResponse.json({user, success: true}, {status: 200})
 }
+
+
+
+export async function PATCH(request: NextRequest) {
+  try {
+    // Extract user ID from token
+    const userId = await getDataFromToken(request);
+    console.log(userId, "userId from token");
+
+    // Parse the request body
+    const reqBody = await request.json();
+    const { username, email, skillsToTeach, skillsToLearn } = reqBody;
+
+    // Find and update the user
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      {
+        ...(username && { username }),
+        ...(email && { email }),
+        ...(skillsToTeach && { skillsToTeach }),
+        ...(skillsToLearn && { skillsToLearn }),
+      },
+      { new: true, runValidators: true } // Return the updated document and validate the input
+    ).select("-password -verifyToken -verifyTokenExpiry -__v");
+
+    if (!updatedUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ user: updatedUser, success: true }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
