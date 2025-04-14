@@ -5,6 +5,8 @@ interface User {
   username: string;
   email: string;
   token: string;
+  skillsToTeach: string[];
+  skillsToLearn: string[];
 }
 
 interface UserState {
