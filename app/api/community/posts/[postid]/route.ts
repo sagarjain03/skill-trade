@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: { postid: 
         // console.log("Fetched post:", params);
         const post = await CommunityPost.findById(params.postid)
             .populate("user", "username rank")
-            // .populate("comments.user", "username profilePic");
+            .populate("comments.user", "username profilePic");
 
         if (!post) {
             console.error("Post not found for ID:", params.postid);
