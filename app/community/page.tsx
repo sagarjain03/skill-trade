@@ -309,7 +309,7 @@ export default function CommunityPage() {
                               rankColors[post.user.rank as keyof typeof rankColors]
                             )}
                           >
-                          {post.user?.rank?.substring(0, 2)} {/* Display the rank inside the circle */}
+                            {post.user.rank.substring(0, 2)}
                           </div>
                         </div>
                         <span className="text-xs text-gray-500">
