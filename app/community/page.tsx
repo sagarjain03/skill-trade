@@ -1,48 +1,15 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { MessageSquare, ThumbsUp, MessageCircle, Award, Plus, Send } from "lucide-react"
-import { Textarea } from "@/components/ui/textarea"
-import { cn } from "@/lib/utils"
-
-const posts = [
-  {
-    id: 1,
-    author: "SkillMaster42",
-    authorRank: "B",
-    content:
-      "Has anyone found a good resource for learning advanced React patterns? I'm struggling with custom hooks and context.",
-    likes: 12,
-    comments: 5,
-    time: "2 hours ago",
-    tags: ["React", "JavaScript", "Help"],
-  },
-  {
-    id: 2,
-    author: "DesignGuru",
-    authorRank: "A",
-    content:
-      "Just completed my first UI/UX course on SkillQuest! The gamification really kept me motivated throughout. Highly recommend checking out @DesignPro's courses.",
-    likes: 24,
-    comments: 8,
-    time: "5 hours ago",
-    tags: ["Design", "Success", "Recommendation"],
-  },
-  {
-    id: 3,
-    author: "CodeNewbie",
-    authorRank: "D",
-    content: "Looking for a study buddy for the Python Data Science track. Anyone interested in pairing up?",
-    likes: 7,
-    comments: 15,
-    time: "1 day ago",
-    tags: ["Python", "DataScience", "StudyBuddy"],
-  },
-]
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { MessageSquare, ThumbsUp, MessageCircle, Plus, Send, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -51,7 +18,7 @@ const rankColors = {
   C: "from-green-500 to-green-700",
   D: "from-orange-500 to-orange-700",
   Beginner: "from-gray-500 to-gray-700",
-}
+};
 
 const rankBorderColors = {
   S: "border-yellow-400",
@@ -60,20 +27,140 @@ const rankBorderColors = {
   C: "border-green-500",
   D: "border-orange-500",
   Beginner: "border-gray-500",
-}
+};
 
 export default function CommunityPage() {
-  const [newPost, setNewPost] = useState("")
-  const [expandedPost, setExpandedPost] = useState<number | null>(null)
-  const [likedPosts, setLikedPosts] = useState<number[]>([])
-
-  const handleLike = (postId: number) => {
-    if (likedPosts.includes(postId)) {
-      setLikedPosts(likedPosts.filter((id) => id !== postId))
-    } else {
-      setLikedPosts([...likedPosts, postId])
-    }
+  const [newPost, setNewPost] = useState("");
+  interface Post {
+    _id: string;
+    content: string;
+    likes: number;
+    comments: any[];
+    tags: string[];
+    user: {
+      username: string;
+      profilePic: string;
+      rank: string;
+    };
+    createdAt: string;
   }
+
+
+  const [tags, setTags] = useState<string[]>([]); // State for tags
+  const [tagInput, setTagInput] = useState("");
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [likedPosts, setLikedPosts] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<any>(null); // Track the selected post for comments
+  const [commentInput, setCommentInput] = useState(""); // Input for adding a comment
+
+  // Fetch posts from the backend
+  const fetchPosts = async () => {
+    try {
+      const response = await axios.get("/api/community/posts");
+      setPosts(response.data.posts);
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleAddTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags((prevTags) => [...prevTags, tagInput.trim()]);
+      setTagInput(""); // Clear the input field
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setTags((prevTags) => prevTags.filter((t) => t !== tag));
+  };
+
+  const handleLike = async (postId: string) => {
+    try {
+      const post = posts.find((p: any) => p._id === postId);
+      if (!post) return;
+
+      // Optimistically update the likes count
+      const updatedLikes = post.likes + 1;
+
+      setPosts((prevPosts) =>
+        prevPosts.map((p: any) =>
+          p._id === postId ? { ...p, likes: updatedLikes } : p
+        )
+      );
+
+      // Send the like request to the backend
+      await axios.post(`/api/community/posts/${postId}/likes`);
+    } catch (error) {
+      console.error("Error liking post:", error);
+    }
+  };
+
+  const handleAddComment = async (postId: string, commentText: string) => {
+    if (!commentText.trim()) return;
+
+    try {
+      const response = await axios.post(`/api/community/posts/${postId}/comments`, {
+        text: commentText,
+      });
+
+      const updatedComments = response.data.comments;
+
+      // Update the comments for the specific post
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post._id === postId ? { ...post, comments: updatedComments } : post
+        )
+      );
+
+      setCommentInput(""); // Clear the input field
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    }
+  };
+
+  const handleViewComments = async (postId: string) => {
+    try {
+      console.log("Attempting to fetch post:", postId);
+      const response = await axios.get(`/api/community/posts/${postId}`);
+      console.log("Post data received:", response.data);
+      setSelectedPost(response.data.post); // Set the selected post with comments
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    }
+  };
+
+  const handleCloseComments = () => {
+    setSelectedPost(null); // Close the comments section
+  };
+
+  const handleCreatePost = async () => {
+    if (!newPost.trim()) return;
+
+    try {
+      const response = await axios.post("/api/community/posts", {
+        content: newPost,
+        tags,
+      });
+
+      const { post } = response.data;
+
+      // Update the posts list with the new post
+      setPosts((prevPosts) => [post, ...prevPosts]);
+
+      // Clear the input field
+      setNewPost("");
+      setTags([]);
+    } catch (error) {
+      console.error("Error creating post:", error);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -95,143 +182,165 @@ export default function CommunityPage() {
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
               />
+              <div className="mt-4">
+                <div className="flex items-center space-x-2">
+                  <Input
+                    placeholder="Add a tag..."
+                    className="bg-gray-800 border-gray-700 focus:border-green-500"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-gray-700 bg-gray-800"
+                    onClick={handleAddTag}
+                  >
+                    <Plus className="h-3 w-3 mr-1" /> Add Tag
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="bg-gray-800 text-xs flex items-center space-x-1"
+                    >
+                      <span>#{tag}</span>
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() => handleRemoveTag(tag)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" className="text-xs border-gray-700 bg-gray-800">
-                  <Plus className="h-3 w-3 mr-1" /> Tag
-                </Button>
-              </div>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button className="bg-green-600 hover:bg-green-700" onClick={handleCreatePost}>
                 <Send className="h-4 w-4 mr-2" /> Post
               </Button>
             </CardFooter>
           </Card>
 
-          {posts.map((post) => (
-            <Card
-              key={post.id}
-              className={cn(
-                "bg-gray-900 border-gray-800 transition-all duration-300",
-                expandedPost === post.id && "ring-1 ring-green-500/50",
-              )}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center">
-                    <Avatar
-                      className={cn(
-                        "h-8 w-8 mr-2 border",
-                        rankBorderColors[post.authorRank as keyof typeof rankBorderColors],
-                      )}
-                    >
-                      <AvatarImage src="/placeholder.svg?height=32&width=32" alt={post.author} />
-                      <AvatarFallback>{post.author.substring(0, 2)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center">
-                        <span className="font-medium text-sm">{post.author}</span>
-                        <div
-                          className={cn(
-                            "ml-1 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold bg-gradient-to-br",
-                            rankColors[post.authorRank as keyof typeof rankColors],
-                          )}
-                        >
-                          {post.authorRank}
-                        </div>
-                      </div>
-                      <span className="text-xs text-gray-500">{post.time}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-2">
-                <p className="text-sm mb-3">{post.content}</p>
-                <div className="flex flex-wrap gap-1">
-                  {post.tags.map((tag, index) => (
-                    <Badge key={index} variant="outline" className="bg-gray-800 text-xs">
-                      #{tag}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between pt-2">
-                <div className="flex space-x-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn("text-xs flex items-center", likedPosts.includes(post.id) && "text-green-400")}
-                    onClick={() => handleLike(post.id)}
-                  >
-                    <ThumbsUp className="h-3 w-3 mr-1" />
-                    {post.likes + (likedPosts.includes(post.id) ? 1 : 0)}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs flex items-center"
-                    onClick={() => setExpandedPost(expandedPost === post.id ? null : post.id)}
-                  >
-                    <MessageCircle className="h-3 w-3 mr-1" />
-                    {post.comments}
-                  </Button>
-                </div>
-              </CardFooter>
-
-              {expandedPost === post.id && (
-                <div className="px-4 pb-4 pt-0">
-                  <div className="border-t border-gray-800 pt-4 space-y-4">
-                    <div className="flex items-start space-x-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src="/placeholder.svg?height=24&width=24" alt="Your avatar" />
-                        <AvatarFallback>YO</AvatarFallback>
+          {isLoading ? (
+            <p>Loading posts...</p>
+          ) : (
+            posts.map((post: any) => (
+              <Card
+                key={post._id}
+                className={cn(
+                  "bg-gray-900 border-gray-800 transition-all duration-300",
+                  likedPosts.includes(post._id) && "ring-1 ring-green-500/50"
+                )}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center">
+                      <Avatar
+                        className={cn(
+                          "h-8 w-8 mr-2 border",
+                          rankBorderColors[post.user.rank as keyof typeof rankBorderColors]
+                        )}
+                      >
+                        <AvatarImage src={post.user.profilePic || "/placeholder.svg"} alt={post.user.username} />
+                        <AvatarFallback>{post.user.username.substring(0, 2)}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="bg-gray-800 rounded-lg p-2">
-                          <div className="flex items-center mb-1">
-                            <span className="text-xs font-medium">You</span>
-                            <div className="ml-1 h-3 w-3 rounded-full flex items-center justify-center text-[8px] font-bold bg-gradient-to-br from-blue-500 to-blue-700">
-                              B
-                            </div>
+                      <div>
+                        <div className="flex items-center">
+                          <span className="font-medium text-sm">{post.user.username}</span>
+                          <div
+                            className={cn(
+                              "ml-1 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold bg-gradient-to-br",
+                              rankColors[post.user.rank as keyof typeof rankColors]
+                            )}
+                          >
+                            {post.user.rank}
                           </div>
-                          <p className="text-xs">
-                            I recommend checking out the React documentation on custom hooks. It's really helpful!
-                          </p>
                         </div>
-                        <div className="flex items-center mt-1 text-xs text-gray-500">
-                          <span>Just now</span>
-                          <span className="mx-1">•</span>
-                          <Button variant="ghost" size="sm" className="h-4 px-1 text-[10px]">
-                            Reply
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex space-x-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src="/placeholder.svg?height=24&width=24" alt="Your avatar" />
-                        <AvatarFallback>YO</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <Textarea
-                          placeholder="Write a comment..."
-                          className="bg-gray-800 border-gray-700 focus:border-green-500 min-h-8 text-xs py-2"
-                          rows={2}
-                        />
-                        <div className="flex justify-end mt-2">
-                          <Button size="sm" className="h-7 text-xs bg-green-600 hover:bg-green-700">
-                            Comment
-                          </Button>
-                        </div>
+                        <span className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <p className="text-sm mb-3">{post.content}</p>
+                  <div className="flex flex-wrap gap-1">
+                    {post.tags.map((tag: string, index: number) => (
+                      <Badge key={index} variant="outline" className="bg-gray-800 text-xs">
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-between pt-2">
+                  <div className="flex space-x-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn("text-xs flex items-center", likedPosts.includes(post._id) && "text-green-400")}
+                      onClick={() => handleLike(post._id)}
+                    >
+                      <ThumbsUp className="h-3 w-3 mr-1" />
+                      {post.likes}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs flex items-center"
+                      onClick={() => handleViewComments(post._id)}
+                    >
+                      <MessageCircle className="h-3 w-3 mr-1" />
+                      {post.comments?.length || 0}
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))
+          )}
         </div>
+
+        {selectedPost && (
+          <div className="lg:col-span-1 bg-gray-900 border-gray-800 p-4 rounded-lg">
+            <h2 className="text-lg font-bold mb-4">Comments</h2>
+            <div className="space-y-4">
+              {selectedPost.comments.map((comment: any, index: number) => (
+                <div key={index} className="flex items-start space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.user.profilePic || "/placeholder.svg"} alt={comment.user.username} />
+                    <AvatarFallback>{comment.user.username.substring(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm font-medium">{comment.user.username}</p>
+                    <p className="text-xs text-gray-400">{comment.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4">
+              <Input
+                placeholder="Write a comment..."
+                className="bg-gray-800 border-gray-700 focus:border-green-500 text-xs"
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddComment(selectedPost._id, commentInput);
+                  }
+                }}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 text-xs border-gray-700 bg-gray-800"
+              onClick={handleCloseComments}
+            >
+              Close Comments
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-6">
           <Card className="bg-gray-900 border-gray-800">
@@ -285,7 +394,7 @@ export default function CommunityPage() {
                         </div>
                         {index === 0 && (
                           <Badge className="ml-2 bg-yellow-500/20 text-yellow-400 text-[10px]">
-                            <Award className="h-2 w-2 mr-1" /> Top Contributor
+                            {/* <Award className="h-2 w-2 mr-1" /> Top Contributor */}
                           </Badge>
                         )}
                       </div>

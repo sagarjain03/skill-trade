@@ -83,11 +83,11 @@ export default function Navbar() {
                 <div className="absolute inset-0 bg-purple-600 rounded-lg rotate-45 transform origin-center"></div>
                 <div className="absolute inset-1 bg-blue-500 rounded-lg rotate-12 transform origin-center"></div>
                 <div className="absolute inset-2 bg-gray-900 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xs">SQ</span>
+                  <span className="text-white font-bold text-xs">ST</span>
                 </div>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-500 bg-clip-text text-transparent">
-                SkillQuest
+                SkillTrade
               </span>
             </Link>
           </div>
