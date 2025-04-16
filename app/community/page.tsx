@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleLike, syncLikedPosts } from "@/lib/redux/features/CommunityData/communitySlice";
 import { RootState } from "@/lib/redux/store";
+import { toast } from "react-hot-toast";
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -199,8 +200,10 @@ export default function CommunityPage() {
       );
 
       setCommentInput(""); // Clear the input field
+      toast.success('Comment added successfully');
     } catch (error) {
       console.error("Error adding comment:", error);
+      toast.error('Failed to add comment');
     }
   };
 
@@ -220,8 +223,10 @@ export default function CommunityPage() {
           return post;
         })
       );
+      toast.success('Comment deleted successfully');
     } catch (error) {
       console.error("Error deleting comment:", error);
+      toast.error('Failed to delete comment');
     }
   };
 
@@ -240,7 +245,10 @@ export default function CommunityPage() {
 
 
   const handleCreatePost = async () => {
-    if (!newPost.trim()) return;
+    if (!newPost.trim()) {
+      toast.error("Post content cannot be empty");
+      return;
+    }
 
     try {
       const response = await axios.post("/api/community/posts", {
@@ -256,8 +264,10 @@ export default function CommunityPage() {
       // Clear the input field
       setNewPost("");
       setTags([]);
+      toast.success("Post created successfully");
     } catch (error) {
       console.error("Error creating post:", error);
+      toast.error("Failed to create post");
     }
   };
 
@@ -268,8 +278,10 @@ export default function CommunityPage() {
 
       // Update the UI after successful deletion
       setPosts((prevPosts) => prevPosts.filter((post) => post._id !== postId));
+      toast.success('Post deleted successfully');
     } catch (error) {
       console.error("Error deleting post:", error);
+      toast.error('Failed to delete post');
     }
   };
 
