@@ -9,6 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import axios from "axios";
 import { useState,useEffect } from "react"
+import { useAppSelector } from "@/lib/redux/hooks"
+
+
+
+
+
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -31,6 +37,15 @@ const rankBorderColors = {
 
 export default function ProfilePage() {
   const [username, setUsername] = useState("");
+  const currentUser = useAppSelector((state) => state.user.currentUser)
+
+  const handleTeachingSkillAdd = () => {
+    console.log("Current user data:", currentUser)
+  }
+
+  const handleLearningSkillAdd = () => {
+    console.log("Current user data:", currentUser)
+  }
 
   // Fetch the username from the profile route
   useEffect(() => {
@@ -103,7 +118,7 @@ export default function ProfilePage() {
                     variant="outline"
                     className="bg-gray-800 border-dashed flex items-center gap-1 hover:bg-gray-700 cursor-pointer"
                   >
-                    <Plus className="h-3 w-3" /> Add Skill
+                    <Plus  className="h-3 w-3" /> Add Skill
                   </Badge>
                 </div>
 
@@ -332,26 +347,21 @@ export default function ProfilePage() {
                     <div>
                       <h3 className="text-lg font-medium mb-3">Skills You Can Teach</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {[
-                          { name: "JavaScript", level: 85, sessions: 12 },
-                          { name: "React", level: 78, sessions: 8 },
-                          { name: "UI Design", level: 70, sessions: 4 },
-                        ].map((skill, index) => (
+                        {currentUser?.skillsToTeach?.map((skill, index) => (
                           <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-medium">{skill.name}</h4>
-                              <Badge className="bg-blue-500/20 text-blue-400">{skill.sessions} sessions</Badge>
-                            </div>
-                            <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
-                              <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${skill.level}%` }}></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-400">
-                              <span>Proficiency</span>
-                              <span>{skill.level}%</span>
-                            </div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-medium">{skill}</h4>
+                            
+                          </div>
+                          <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
+                            <div className="bg-blue-500 h-2 rounded-full"></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-400">
+                            
+                          </div>
                           </div>
                         ))}
-                        <div className="bg-gray-800 rounded-lg p-4 border border-dashed border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors">
+                        <div onClick={handleTeachingSkillAdd} className="bg-gray-800 rounded-lg p-4 border border-dashed border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors">
                           <Plus className="h-5 w-5 mr-2 text-gray-400" />
                           <span>Add Teaching Skill</span>
                         </div>
@@ -361,28 +371,24 @@ export default function ProfilePage() {
                     <div>
                       <h3 className="text-lg font-medium mb-3">Skills You Want to Learn</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {[
-                          { name: "Python", progress: 45, sessions: 3 },
-                          { name: "Data Science", progress: 20, sessions: 1 },
-                        ].map((skill, index) => (
+                        {currentUser?.skillsToLearn?.map((skill, index) => (
                           <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
                             <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-medium">{skill.name}</h4>
-                              <Badge className="bg-purple-500/20 text-purple-400">{skill.sessions} sessions</Badge>
+                              <h4 className="font-medium">{skill}</h4>
+                              
                             </div>
                             <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
                               <div
                                 className="bg-purple-500 h-2 rounded-full"
-                                style={{ width: `${skill.progress}%` }}
+                                
                               ></div>
                             </div>
                             <div className="flex justify-between text-xs text-gray-400">
-                              <span>Learning Progress</span>
-                              <span>{skill.progress}%</span>
+                              
                             </div>
                           </div>
                         ))}
-                        <div className="bg-gray-800 rounded-lg p-4 border border-dashed border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors">
+                        <div onClick={handleLearningSkillAdd} className="bg-gray-800 rounded-lg p-4 border border-dashed border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors">
                           <Plus className="h-5 w-5 mr-2 text-gray-400" />
                           <span>Add Learning Skill</span>
                         </div>
