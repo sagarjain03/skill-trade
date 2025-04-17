@@ -10,9 +10,9 @@ import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 
 // Import Redux actions and selectors
-import { 
-  startChallenge, 
-  answerQuestion, 
+import {
+  startChallenge,
+  answerQuestion,
   resetChallenge,
   selectChallenges,
   selectCurrentChallenge,
@@ -37,7 +37,7 @@ import { AppDispatch } from "@/lib/redux/store"
 
 export default function ChallengesPage() {
   const dispatch = useDispatch<AppDispatch>()
-  
+
   // Challenge selectors
   const challenges = useSelector(selectChallenges)
   const currentChallenge = useSelector(selectCurrentChallenge)
@@ -46,7 +46,7 @@ export default function ChallengesPage() {
   const isCompleted = useSelector(selectIsCompleted)
   const correctAnswers = useSelector(selectCorrectAnswers)
   const performanceBreakdown = useSelector(selectPerformanceBreakdown)
-  
+
   // Timer selectors
   const timeRemainingFormatted = useSelector(selectTimeRemainingFormatted)
   const percentTimeRemaining = useSelector(selectPercentTimeRemaining)
@@ -76,7 +76,7 @@ export default function ChallengesPage() {
   const handleStartChallenge = (id: number) => {
     dispatch(resetChallenge())
     dispatch(resetTimer())
-    
+
     // Find the challenge to get its time limit
     const challenge = challenges.find(c => c.id === id)
     if (challenge) {
@@ -84,7 +84,7 @@ export default function ChallengesPage() {
       dispatch(startChallenge(id))
       dispatch(startTimerAsync())
     }
-    
+
     setSelectedAnswer(null)
     setShowResults(false)
   }
@@ -92,7 +92,7 @@ export default function ChallengesPage() {
   // Handle answering a question
   const handleAnswerQuestion = (optionIndex: number) => {
     setSelectedAnswer(optionIndex)
-    
+
     // Use a short delay to show the selection before moving to next question
     setTimeout(() => {
       dispatch(answerQuestion(optionIndex))

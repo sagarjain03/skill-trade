@@ -37,7 +37,11 @@ export async function GET() {
   try {
     const posts = await CommunityPost.find({})
       .populate("user", "username rank")
+<<<<<<< HEAD
       .populate("comments.user", "username profilePic")
+=======
+      .populate("comments.user", "username profilePic rank")
+>>>>>>> a59e5a417e71a0feddb6ec011f756c7c60d3dff4
       .sort({ createdAt: -1 });
 
     return NextResponse.json({ posts });

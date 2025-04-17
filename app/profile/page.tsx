@@ -449,34 +449,56 @@ export default function ProfilePage() {
   )
 }
 
-function SkillsDropdown({ currentSkills, type }: { currentSkills: string[]; type: "skillsToTeach" | "skillsToLearn" }) {
+function SkillsDropdown({
+  currentSkills,
+  type,
+}: {
+  currentSkills: string[];
+  type: "skillsToTeach" | "skillsToLearn";
+}) {
   const [selectedSkills, setSelectedSkills] = useState<string[]>(currentSkills);
   const [loading, setLoading] = useState(false);
 
-  const techOptions = ["JavaScript", "React", "Python", "Node.js", "UI Design", "Data Science", "Machine Learning"];
+  const techOptions = [
+    "JavaScript",
+    "React",
+    "Python",
+    "Node.js",
+    "UI Design",
+    "Data Science",
+    "Machine Learning",
+  ];
 
+  // Handle skill selection/deselection
   const handleSkillChange = (skill: string) => {
-    if (selectedSkills.includes(skill)) {
-      setSelectedSkills(selectedSkills.filter((s) => s !== skill));
-    } else {
-      setSelectedSkills([...selectedSkills, skill]);
-    }
+    setSelectedSkills((prevSkills) =>
+      prevSkills.includes(skill)
+        ? prevSkills.filter((s) => s !== skill) // Remove skill if already selected
+        : [...prevSkills, skill] // Add skill if not selected
+    );
   };
 
+  // Save selected skills to the backend
   const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await axios.patch(`/api/users/profile`, {
-        [type]: selectedSkills,
-      });
+      const response = await axios.patch(
+        `/api/users/profile`,
+        {
+          [type]: selectedSkills, // Send the updated skills
+        },
+        { withCredentials: true } // Include cookies for authentication
+      );
+
       if (response.data.success) {
+        console.log("Updated skills:", selectedSkills);
         toast.success("Skills updated successfully!");
       } else {
         toast.error("Failed to update skills.");
       }
     } catch (error) {
       console.error("Error updating skills:", error);
-      alert("An error occurred while updating skills.");
+      toast.error("An error occurred while updating skills.");
     } finally {
       setLoading(false);
     }
@@ -484,26 +506,28 @@ function SkillsDropdown({ currentSkills, type }: { currentSkills: string[]; type
 
   return (
     <div>
-      <Select>
-        <SelectTrigger>
-          <SelectValue placeholder={`Select ${type === "skillsToTeach" ? "Teaching" : "Learning"} Skills`} />
-        </SelectTrigger>
-        <SelectContent>
-          {techOptions.map((tech) => (
-            <SelectItem
-              key={tech}
-              value={tech}
-              onClick={() => handleSkillChange(tech)}
-              className={selectedSkills.includes(tech) ? "bg-blue-500 text-white" : ""}
-            >
-              {tech}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button onClick={handleSave} disabled={loading} className="mt-4">
+      <h3 className="font-semibold mb-2">
+        Select {type === "skillsToTeach" ? "Teaching" : "Learning"} Skills:
+      </h3>
+      <div className="grid gap-2 mb-4">
+        {techOptions.map((tech) => (
+          <label key={tech} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedSkills.includes(tech)}
+              onChange={() => handleSkillChange(tech)}
+              className="form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <span className="text-gray-200">{tech}</span>
+          </label>
+        ))}
+      </div>
+
+      <Button onClick={handleSave} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
         {loading ? "Saving..." : "Save"}
       </Button>
     </div>
   );
 }
+
+// export default SkillsDropdown;

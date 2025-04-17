@@ -21,25 +21,32 @@ export async function GET(request:NextRequest){
 
 export async function PATCH(request: NextRequest) {
   try {
-    // Extract user ID from token
     const userId = await getDataFromToken(request);
-    console.log(userId, "userId from token");
+    console.log("User ID from token:", userId);
 
-    // Parse the request body
     const reqBody = await request.json();
+    console.log("Request body:", reqBody);
+
     const { username, email, skillsToTeach, skillsToLearn, currentlyLearning } = reqBody;
 
-    // Find and update the user
+    const updateData: any = {
+      ...(username && { username }),
+      ...(email && { email }),
+      ...(skillsToTeach && { skillsToTeach }),
+      ...(skillsToLearn && { skillsToLearn }),
+      ...(currentlyLearning && { currentlyLearning }),
+    };
+
+    if (skillsToLearn && skillsToLearn.length > 0) {
+      console.log("Setting currentlyLearning to:", skillsToLearn[0]);
+      updateData.currentlyLearning = skillsToLearn[0];
+    }
+
+    console.log("Update data:", updateData);
+
     const updatedUser = await User.findOneAndUpdate(
       { _id: userId },
-      {
-        ...(username && { username }),
-        ...(email && { email }),
-        ...(skillsToTeach && { skillsToTeach }),
-        ...(skillsToLearn && { skillsToLearn }),
-        ...(currentlyLearning && { currentlyLearning }),
-        
-      },
+      updateData,
       { new: true, runValidators: true }
     ).select("-password -verifyToken -verifyTokenExpiry -__v");
 
@@ -47,8 +54,11 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    console.log("Updated user:", updatedUser);
+
     return NextResponse.json({ user: updatedUser, success: true }, { status: 200 });
   } catch (error: any) {
+    console.error("Error updating user:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

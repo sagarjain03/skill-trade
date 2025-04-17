@@ -6,13 +6,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, ThumbsUp, MessageCircle, Plus, Send, X } from "lucide-react";
+import { MessageSquare, ThumbsUp, MessageCircle, Plus, Send, X, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleLike, syncLikedPosts } from "@/lib/redux/features/CommunityData/communitySlice";
 import { RootState } from "@/lib/redux/store";
+import { toast } from "react-hot-toast";
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -33,19 +34,32 @@ const rankBorderColors = {
 };
 
 export default function CommunityPage() {
+  interface Comment {
+    _id: string;
+    content: string;
+    user: {
+      _id: string;
+      username: string;
+      profilePic: string;
+      rank: string;
+    };
+    createdAt: string;
+  }
+
   interface Post {
     _id: string;
     content: string;
     likes: number;
     isLiked: boolean;
-    comments: {
-      content: string;
-      user: {
-        username: string;
-        profilePic: string;
-      };
-      createdAt: string;
-    };
+    // comments: {
+    //   content: string;
+    //   user: {
+    //     username: string;
+    //     profilePic: string;
+    //   };
+    //   createdAt: string;
+    // };
+    comments: Comment[];
     tags: string[];
     user: {
       username: string;
@@ -64,10 +78,21 @@ export default function CommunityPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<string | null>(null); // Track the selected post for comments
   const [commentInput, setCommentInput] = useState(""); // Input for adding a comment
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
 
   const dispatch = useDispatch();
   const likedPosts = useSelector((state: RootState) => state.community.likedPosts);
+
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await axios.get("/api/users/profile");
+      setCurrentUserId(response.data.user._id);
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+    }
+  };
 
 
   // Fetch posts from the backend
@@ -88,6 +113,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     fetchPosts();
+    fetchCurrentUser(); // Fetch the current user ID when the component mounts
   }, []);
 
   const handleAddTag = () => {
@@ -174,8 +200,33 @@ export default function CommunityPage() {
       );
 
       setCommentInput(""); // Clear the input field
+      toast.success('Comment added successfully');
     } catch (error) {
       console.error("Error adding comment:", error);
+      toast.error('Failed to add comment');
+    }
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    try {
+      await axios.delete(`/api/community/posts/${postId}/comments/${commentId}`);
+
+      // Update the UI after successful deletion
+      setPosts((prevPosts) =>
+        prevPosts.map((post) => {
+          if (post._id === postId) {
+            return {
+              ...post,
+              comments: post.comments.filter((comment) => comment._id !== commentId)
+            };
+          }
+          return post;
+        })
+      );
+      toast.success('Comment deleted successfully');
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      toast.error('Failed to delete comment');
     }
   };
 
@@ -194,7 +245,10 @@ export default function CommunityPage() {
 
 
   const handleCreatePost = async () => {
-    if (!newPost.trim()) return;
+    if (!newPost.trim()) {
+      toast.error("Post content cannot be empty");
+      return;
+    }
 
     try {
       const response = await axios.post("/api/community/posts", {
@@ -210,10 +264,27 @@ export default function CommunityPage() {
       // Clear the input field
       setNewPost("");
       setTags([]);
+      toast.success("Post created successfully");
     } catch (error) {
       console.error("Error creating post:", error);
+      toast.error("Failed to create post");
     }
   };
+
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await axios.delete(`/api/community/posts/${postId}`);
+
+      // Update the UI after successful deletion
+      setPosts((prevPosts) => prevPosts.filter((post) => post._id !== postId));
+      toast.success('Post deleted successfully');
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error('Failed to delete post');
+    }
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -309,7 +380,11 @@ export default function CommunityPage() {
                               rankColors[post.user.rank as keyof typeof rankColors]
                             )}
                           >
+<<<<<<< HEAD
                           {post.user?.rank?.substring(0, 2)} {/* Display the rank inside the circle */}
+=======
+                            {post.user?.rank?.substring(0, 2)} {/* Display the rank inside the circle */}
+>>>>>>> a59e5a417e71a0feddb6ec011f756c7c60d3dff4
                           </div>
                         </div>
                         <span className="text-xs text-gray-500">
@@ -320,10 +395,20 @@ export default function CommunityPage() {
                         </span>
                       </div>
                     </div>
+                    {currentUserId === post.user._id && ( // Show delete button only for the current user's posts
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10 h-6 w-6 p-0"
+                        onClick={() => handleDeletePost(post._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="pb-2">
-                  <p className="text-sm mb-3">{post.content}</p>
+                  <p className="text-sm mb-3 break-word">{post.content}</p>
                   <div className="flex flex-wrap gap-1">
                     {post.tags.map((tag: string, index: number) => (
                       <Badge key={index} variant="outline" className="bg-gray-800 text-xs">
@@ -364,29 +449,41 @@ export default function CommunityPage() {
 
                       {/* Existing Comments */}
                       {post.comments
-                        ?.slice() // Create a shallow copy of the comments array
-                        .reverse() // Reverse the order to show the latest comments first
-                        .map((comment: any, index: number) => (
-                          <div key={index} className="flex items-start space-x-2">
+                        ?.slice()
+                        .reverse()
+                        .map((comment: Comment) => (
+                          <div key={comment._id} className="flex items-start space-x-2">
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={comment.user?.profilePic || "/placeholder.svg"} />
                               <AvatarFallback>
                                 {comment.user?.username?.substring(0, 2) || "?"}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <div className="flex items-center">
-                                <p className="text-sm font-medium">{comment.user?.username || "Anonymous"}</p>
-                                <div
-                                  className={cn(
-                                    "ml-2 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br",
-                                    rankColors[comment.user?.rank as keyof typeof rankColors]
-                                  )}
-                                >
-                                  {comment.user?.rank?.substring(0, 2) || ""}
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <p className="text-sm font-medium">{comment.user?.username || "Anonymous"}</p>
+                                  <div
+                                    className={cn(
+                                      "ml-2 h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-gradient-to-br",
+                                      rankColors[comment.user?.rank as keyof typeof rankColors] || rankColors.Beginner
+                                    )}
+                                  >
+                                    {comment.user?.rank?.substring(0, 2) || "B"}
+                                  </div>
                                 </div>
+                                {currentUserId === comment.user?._id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10 h-6 w-6 p-0"
+                                    onClick={() => handleDeleteComment(post._id, comment._id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
                               </div>
-                              <p className="text-sm text-gray-400">{comment.content}</p>
+                              <p className="text-sm text-gray-400 break-words">{comment.content}</p>
                               <p className="text-xs text-gray-500">
                                 {new Date(comment.createdAt).toLocaleString(undefined, {
                                   hour: "2-digit",
@@ -399,32 +496,38 @@ export default function CommunityPage() {
 
                       {/* Comment Input */}
                       <div className="flex space-x-2">
-                        {/* <Avatar className="h-6 w-6">
-                          <AvatarImage src="/placeholder.svg" alt="Your avatar" />
-                          <AvatarFallback>YO</AvatarFallback>
-                        </Avatar> */}
                         <div className="flex-1">
                           <Textarea
-                            placeholder="Write a comment..."
-                            className="bg-gray-800 border-gray-700 focus:border-green-500 min-h-8 text-xs py-2"
-                            rows={2}
-                            value={commentInput}
-                            onChange={(e) => setCommentInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                handleAddComment(post._id, commentInput);
-                              }
-                            }}
+                          placeholder="Write a comment..."
+                          className="bg-gray-800 border-gray-700 focus:border-green-500 text-xs py-2 resize-none"
+                          style={{ 
+                          height: '40px',
+                          minHeight: '40px',
+                          maxHeight: '200px',
+                          overflowY: 'auto'
+                          }}
+                          value={commentInput}
+                          onChange={(e) => {
+                          setCommentInput(e.target.value);
+                          e.target.style.height = '40px';
+                          const newHeight = Math.min(e.target.scrollHeight, 200);
+                          e.target.style.height = `${newHeight}px`;
+                          }}
+                          onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddComment(post._id, commentInput);
+                          }
+                          }}
                           />
                           <div className="flex justify-end mt-2">
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs bg-green-600 hover:bg-green-700"
-                              onClick={() => handleAddComment(post._id, commentInput)}
-                            >
-                              Comment
-                            </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                            onClick={() => handleAddComment(post._id, commentInput)}
+                          >
+                            Comment
+                          </Button>
                           </div>
                         </div>
                       </div>
