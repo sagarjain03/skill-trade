@@ -8,13 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import axios from "axios";
-import { useState,useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useAppSelector } from "@/lib/redux/hooks"
-
-
-
-
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import toast from "react-hot-toast"
 
 const rankColors = {
   S: "from-yellow-400 to-amber-600",
@@ -34,18 +31,14 @@ const rankBorderColors = {
   Beginner: "border-gray-500",
 }
 
-
 export default function ProfilePage() {
   const [username, setUsername] = useState("");
   const currentUser = useAppSelector((state) => state.user.currentUser)
 
-  const handleTeachingSkillAdd = () => {
-    console.log("Current user data:", currentUser)
-  }
-
-  const handleLearningSkillAdd = () => {
-    console.log("Current user data:", currentUser)
-  }
+  const rank = "B"
+  const nextRank = "A"
+  const xpCurrent = 2450
+  const xpRequired = 3000
 
   // Fetch the username from the profile route
   useEffect(() => {
@@ -60,11 +53,6 @@ export default function ProfilePage() {
   
     fetchProfile();
   }, []);
-
-  const rank = "B"
-  const nextRank = "A"
-  const xpCurrent = 2450
-  const xpRequired = 3000
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -346,53 +334,12 @@ export default function ProfilePage() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-medium mb-3">Skills You Can Teach</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentUser?.skillsToTeach?.map((skill, index) => (
-                          <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                          <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-medium">{skill}</h4>
-                            
-                          </div>
-                          <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
-                            <div className="bg-blue-500 h-2 rounded-full"></div>
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-400">
-                            
-                          </div>
-                          </div>
-                        ))}
-                        <div onClick={handleTeachingSkillAdd} className="bg-gray-800 rounded-lg p-4 border border-dashed border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors">
-                          <Plus className="h-5 w-5 mr-2 text-gray-400" />
-                          <span>Add Teaching Skill</span>
-                        </div>
-                      </div>
+                      <SkillsDropdown currentSkills={currentUser?.skillsToTeach || []} type="skillsToTeach" />
                     </div>
 
                     <div>
                       <h3 className="text-lg font-medium mb-3">Skills You Want to Learn</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {currentUser?.skillsToLearn?.map((skill, index) => (
-                          <div key={index} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                            <div className="flex justify-between items-center mb-2">
-                              <h4 className="font-medium">{skill}</h4>
-                              
-                            </div>
-                            <div className="w-full bg-gray-700 rounded-full h-2 mb-1">
-                              <div
-                                className="bg-purple-500 h-2 rounded-full"
-                                
-                              ></div>
-                            </div>
-                            <div className="flex justify-between text-xs text-gray-400">
-                              
-                            </div>
-                          </div>
-                        ))}
-                        <div onClick={handleLearningSkillAdd} className="bg-gray-800 rounded-lg p-4 border border-dashed border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-colors">
-                          <Plus className="h-5 w-5 mr-2 text-gray-400" />
-                          <span>Add Learning Skill</span>
-                        </div>
-                      </div>
+                      <SkillsDropdown currentSkills={currentUser?.skillsToLearn || []} type="skillsToLearn" />
                     </div>
                   </div>
                 </CardContent>
@@ -500,4 +447,63 @@ export default function ProfilePage() {
       </div>
     </div>
   )
+}
+
+function SkillsDropdown({ currentSkills, type }: { currentSkills: string[]; type: "skillsToTeach" | "skillsToLearn" }) {
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(currentSkills);
+  const [loading, setLoading] = useState(false);
+
+  const techOptions = ["JavaScript", "React", "Python", "Node.js", "UI Design", "Data Science", "Machine Learning"];
+
+  const handleSkillChange = (skill: string) => {
+    if (selectedSkills.includes(skill)) {
+      setSelectedSkills(selectedSkills.filter((s) => s !== skill));
+    } else {
+      setSelectedSkills([...selectedSkills, skill]);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.patch(`/api/users/profile`, {
+        [type]: selectedSkills,
+      });
+      if (response.data.success) {
+        toast.success("Skills updated successfully!");
+      } else {
+        toast.error("Failed to update skills.");
+      }
+    } catch (error) {
+      console.error("Error updating skills:", error);
+      alert("An error occurred while updating skills.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <Select>
+        <SelectTrigger>
+          <SelectValue placeholder={`Select ${type === "skillsToTeach" ? "Teaching" : "Learning"} Skills`} />
+        </SelectTrigger>
+        <SelectContent>
+          {techOptions.map((tech) => (
+            <SelectItem
+              key={tech}
+              value={tech}
+              onClick={() => handleSkillChange(tech)}
+              className={selectedSkills.includes(tech) ? "bg-blue-500 text-white" : ""}
+            >
+              {tech}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button onClick={handleSave} disabled={loading} className="mt-4">
+        {loading ? "Saving..." : "Save"}
+      </Button>
+    </div>
+  );
 }

@@ -11,7 +11,7 @@ connectDB()
 export async function POST(request: NextRequest){
     try {
         const reqBody = await request.json()
-        const { username, email, password, skillsToTeach, skillsToLearn } = reqBody
+        const { username, email, password, skillsToTeach, skillsToLearn, currentlyLearning } = reqBody
 
         console.log(reqBody);
 
@@ -32,6 +32,7 @@ export async function POST(request: NextRequest){
             password: hashedPassword,
             skillsToTeach,
             skillsToLearn,
+            currentlyLearning
         })
 
         const savedUser = await newUser.save()
