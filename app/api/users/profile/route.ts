@@ -1,23 +1,20 @@
-import {connectDB} from "@/dbconfig/dbconfig"
+import { connectDB } from "@/dbconfig/dbconfig"
 import { getDataFromToken } from "@/helpers/getDataFromToken";
 import User from "@/models/userModel";
 import { NextRequest, NextResponse } from "next/server";
 
-
 connectDB()
 
-export async function GET(request:NextRequest){
-  //extract data from token 
+export async function GET(request: NextRequest) {
+  // extract data from token 
   const userId = await getDataFromToken(request)
-  const user = await User.findOne({_id: userId}).select("-password -verifyToken -verifyTokenExpiry -__v")
+  const user = await User.findOne({ _id: userId }).select("-password -verifyToken -verifyTokenExpiry -__v")
 
-  if(!user){
-    return NextResponse.json({error: "User not found"}, {status: 404})
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
-  return NextResponse.json({user, success: true}, {status: 200})
+  return NextResponse.json({ user, success: true }, { status: 200 })
 }
-
-
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -27,14 +24,17 @@ export async function PATCH(request: NextRequest) {
     const reqBody = await request.json();
     console.log("Request body:", reqBody);
 
-    const { username, email, skillsToTeach, skillsToLearn, currentlyLearning } = reqBody;
+    const { username, email, skillsToTeach, skillsToLearn, currentlyLearning, isFindingMatch } = reqBody;
 
+    // Build update data object; include isFindingMatch update if provided
     const updateData: any = {
       ...(username && { username }),
       ...(email && { email }),
       ...(skillsToTeach && { skillsToTeach }),
       ...(skillsToLearn && { skillsToLearn }),
       ...(currentlyLearning && { currentlyLearning }),
+      // Update isFindingMatch if it's a boolean value
+      ...(typeof isFindingMatch === "boolean" && { isFindingMatch }),
     };
 
     if (skillsToLearn && skillsToLearn.length > 0) {

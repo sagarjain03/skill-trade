@@ -33,7 +33,9 @@ export async function POST(request: NextRequest){
             skillsToTeach,
             skillsToLearn,
 
-            currentlyLearning
+            currentlyLearning,
+
+
 
         })
 
