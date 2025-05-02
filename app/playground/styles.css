@@ -1,0 +1,76 @@
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+
+.monaco-editor .margin {
+  background-color: #0f1117 !important;
+}
+
+.monaco-editor .minimap {
+  background-color: #0f1117 !important;
+}
+
+.monaco-editor .monaco-scrollable-element {
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+.monaco-editor .cursor {
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+}
+
+/* Glowing effect for active line */
+.monaco-editor .current-line {
+  border: none !important;
+  background-color: rgba(59, 130, 246, 0.05) !important;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.1);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Animation for the run button */
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+}
+
+.glow-effect {
+  animation: glow 2s infinite;
+}
+
+/* Futuristic terminal effect */
+@keyframes terminal-scan {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
+.terminal-effect {
+  background: linear-gradient(to bottom, transparent, rgba(59, 130, 246, 0.03), transparent);
+  background-size: 100% 50px;
+  animation: terminal-scan 3s linear infinite;
+}

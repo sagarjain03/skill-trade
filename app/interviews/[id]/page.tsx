@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,21 +21,35 @@ import {
   ThumbsDown,
   BarChart,
   Award,
+  Volume2,
+  VolumeX,
+  RefreshCw,
 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import axios from "@/lib/axios"
 
 // Types for interview data
 interface Interview {
-  id: string
+  _id: string
   userId: string
   role: string
   type: string
   techstack: string[]
   level: string
   questions: string[]
+  answers?: string[]
+  feedback?: InterviewFeedback[]
   finalized: boolean
   createdAt: string
+}
+
+interface InterviewFeedback {
+  questionIndex: number
+  score: number
+  feedback: string
+  suggestions: string[]
 }
 
 export default function InterviewDetailPage() {
@@ -49,59 +63,53 @@ export default function InterviewDetailPage() {
   const [isRecording, setIsRecording] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackScore, setFeedbackScore] = useState(0)
+  const [feedbackText, setFeedbackText] = useState("")
+  const [feedbackSuggestions, setFeedbackSuggestions] = useState<string[]>([])
   const [completed, setCompleted] = useState(false)
+  const [overallScore, setOverallScore] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [vapiCallId, setVapiCallId] = useState<string | null>(null)
+  const [transcription, setTranscription] = useState("")
+  const [interviewResults, setInterviewResults] = useState<InterviewFeedback[]>([])
 
-  // Dummy interview data
-  const dummyInterviews: Interview[] = [
-    {
-      id: "1",
-      userId: "user1",
-      role: "Frontend Developer",
-      type: "Technical",
-      techstack: ["React", "TypeScript", "Next.js", "Tailwind CSS"],
-      level: "Junior",
-      questions: ["What is React?", "Explain useState hook", "How does React rendering work?"],
-      finalized: false,
-      createdAt: "2024-03-15T10:00:00Z",
-    },
-    {
-      id: "2",
-      userId: "user1",
-      role: "Backend Developer",
-      type: "Technical",
-      techstack: ["Node.js", "Express", "MongoDB", "GraphQL"],
-      level: "Mid-level",
-      questions: ["What is Node.js?", "Explain RESTful APIs", "How does MongoDB work?"],
-      finalized: true,
-      createdAt: "2024-03-10T14:30:00Z",
-    },
-    {
-      id: "3",
-      userId: "user1",
-      role: "Full Stack Developer",
-      type: "Behavioral",
-      techstack: ["React", "Node.js", "PostgreSQL", "Docker"],
-      level: "Senior",
-      questions: [
-        "Tell me about a challenging project you worked on",
-        "How do you handle conflicts in a team?",
-        "Describe your ideal work environment",
-      ],
-      finalized: true,
-      createdAt: "2024-02-28T09:15:00Z",
-    },
-    {
-      id: "4",
-      userId: "user1",
-      role: "UI/UX Designer",
-      type: "Portfolio",
-      techstack: ["Figma", "Adobe XD", "Sketch", "User Research"],
-      level: "Mid-level",
-      questions: ["Walk me through your design process", "How do you incorporate user feedback?"],
-      finalized: false,
-      createdAt: "2024-03-05T11:45:00Z",
-    },
-  ]
+  // Audio elements
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Fetch interview data
+  useEffect(() => {
+    const fetchInterview = async () => {
+      try {
+        setLoading(true)
+        const response = await axios.get(`/interviews/${params.id}`)
+        if (response.data.success) {
+          setInterview(response.data.interview)
+          setCompleted(response.data.interview.finalized)
+
+          if (response.data.interview.feedback && response.data.interview.feedback.length > 0) {
+            setInterviewResults(response.data.interview.feedback)
+
+            // Calculate overall score
+            const totalScore = response.data.interview.feedback.reduce(
+              (sum: number, item: InterviewFeedback) => sum + item.score,
+              0,
+            )
+            setOverallScore(Math.round(totalScore / response.data.interview.feedback.length))
+          }
+        } else {
+          toast.error("Failed to load interview")
+        }
+      } catch (error) {
+        console.error("Error fetching interview:", error)
+        toast.error("Error loading interview data")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (params.id) {
+      fetchInterview()
+    }
+  }, [params.id])
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -109,54 +117,226 @@ export default function InterviewDetailPage() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
 
-  useEffect(() => {
-    // Simulate API call to fetch interview data
-    setLoading(true)
-    setTimeout(() => {
-      const foundInterview = dummyInterviews.find((i) => i.id === params.id)
-      if (foundInterview) {
-        setInterview(foundInterview)
-        setCompleted(foundInterview.finalized)
-      }
-      setLoading(false)
-    }, 1000)
-  }, [params.id])
-
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (!interview) return
+
+    // Save the current answer and feedback before moving to next question
+    try {
+      await axios.post(`/interviews/${interview._id}/answer`, {
+        questionIndex: currentQuestionIndex,
+        answer: userAnswer,
+        feedback: {
+          score: feedbackScore,
+          feedback: feedbackText,
+          suggestions: feedbackSuggestions,
+        },
+      })
+    } catch (error) {
+      console.error("Error saving answer:", error)
+      toast.error("Failed to save your answer")
+    }
 
     if (currentQuestionIndex < interview.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
       setUserAnswer("")
       setShowFeedback(false)
+      setTranscription("")
     } else {
       // Last question completed
-      setCompleted(true)
+      try {
+        await axios.patch(`/interviews/${interview._id}/finalize`)
+        setCompleted(true)
+        toast.success("Interview completed!")
+
+        // Fetch the final results
+        const response = await axios.get(`/interviews/${interview._id}`)
+        if (response.data.success) {
+          setInterviewResults(response.data.interview.feedback || [])
+
+          // Calculate overall score
+          if (response.data.interview.feedback && response.data.interview.feedback.length > 0) {
+            const totalScore = response.data.interview.feedback.reduce(
+              (sum: number, item: InterviewFeedback) => sum + item.score,
+              0,
+            )
+            setOverallScore(Math.round(totalScore / response.data.interview.feedback.length))
+          }
+        }
+      } catch (error) {
+        console.error("Error finalizing interview:", error)
+        toast.error("Failed to complete interview")
+      }
     }
   }
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1)
-      setUserAnswer("")
-      setShowFeedback(false)
+
+      // Load previous answer if available
+      if (interview?.answers && interview.answers[currentQuestionIndex - 1]) {
+        setUserAnswer(interview.answers[currentQuestionIndex - 1])
+      } else {
+        setUserAnswer("")
+      }
+
+      // Load previous feedback if available
+      if (interview?.feedback && interview.feedback[currentQuestionIndex - 1]) {
+        const feedback = interview.feedback[currentQuestionIndex - 1]
+        setFeedbackScore(feedback.score)
+        setFeedbackText(feedback.feedback)
+        setFeedbackSuggestions(feedback.suggestions)
+        setShowFeedback(true)
+      } else {
+        setShowFeedback(false)
+      }
     }
   }
 
-  const handleSubmitAnswer = () => {
+  const handleSubmitAnswer = async () => {
+    if (!userAnswer.trim()) return
+
     setIsAnswering(true)
 
-    // Simulate AI processing
-    setTimeout(() => {
+    try {
+      // Send the answer to the backend for AI analysis
+      const response = await axios.post(`/interviews/${interview?._id}/analyze`, {
+        questionIndex: currentQuestionIndex,
+        answer: userAnswer,
+        question: interview?.questions[currentQuestionIndex],
+      })
+
+      if (response.data.success) {
+        setFeedbackScore(response.data.score)
+        setFeedbackText(response.data.feedback)
+        setFeedbackSuggestions(response.data.suggestions || [])
+        setShowFeedback(true)
+      } else {
+        toast.error("Failed to analyze answer")
+      }
+    } catch (error) {
+      console.error("Error analyzing answer:", error)
+      toast.error("Error analyzing your answer")
+    } finally {
       setIsAnswering(false)
-      setShowFeedback(true)
-      // Generate random score between 60 and 95
-      setFeedbackScore(Math.floor(Math.random() * 36) + 60)
-    }, 2000)
+    }
   }
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording)
+  // Start Vapi call for voice interview
+  const startVapiCall = async () => {
+    if (!interview) return
+
+    try {
+      setIsRecording(true)
+
+      // Initialize Vapi call
+      const response = await axios.post("/api/vapi/start-interview", {
+        question: interview.questions[currentQuestionIndex],
+        role: interview.role,
+        type: interview.type,
+        level: interview.level,
+      })
+
+      if (response.data.success) {
+        setVapiCallId(response.data.callId)
+
+        // Create audio element for the call
+        if (!audioRef.current) {
+          const audio = new Audio(response.data.audioUrl)
+          audio.onended = () => setIsPlaying(false)
+          audioRef.current = audio
+        } else {
+          audioRef.current.src = response.data.audioUrl
+        }
+
+        // Start playing the interviewer's question
+        audioRef.current.play()
+        setIsPlaying(true)
+
+        // Poll for transcription updates
+        pollForTranscription(response.data.callId)
+      } else {
+        toast.error("Failed to start voice interview")
+        setIsRecording(false)
+      }
+    } catch (error) {
+      console.error("Error starting Vapi call:", error)
+      toast.error("Failed to initialize voice interview")
+      setIsRecording(false)
+    }
+  }
+
+  // End Vapi call
+  const endVapiCall = async () => {
+    if (!vapiCallId) return
+
+    try {
+      // Stop the audio if playing
+      if (audioRef.current && isPlaying) {
+        audioRef.current.pause()
+        setIsPlaying(false)
+      }
+
+      // End the Vapi call
+      const response = await axios.post("/api/vapi/end-interview", {
+        callId: vapiCallId,
+      })
+
+      if (response.data.success) {
+        // Set the transcribed answer
+        setUserAnswer(transcription)
+        toast.success("Voice interview completed")
+      } else {
+        toast.error("Failed to end voice interview")
+      }
+    } catch (error) {
+      console.error("Error ending Vapi call:", error)
+      toast.error("Error ending voice interview")
+    } finally {
+      setIsRecording(false)
+      setVapiCallId(null)
+    }
+  }
+
+  // Poll for transcription updates
+  const pollForTranscription = async (callId: string) => {
+    if (!callId) return
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(`/api/vapi/transcription/${callId}`)
+
+        if (response.data.success) {
+          setTranscription(response.data.transcription)
+
+          // If call is completed, clear interval
+          if (response.data.status === "completed") {
+            clearInterval(pollInterval)
+            setIsRecording(false)
+            setUserAnswer(response.data.transcription)
+          }
+        }
+      } catch (error) {
+        console.error("Error polling for transcription:", error)
+        clearInterval(pollInterval)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    // Clean up interval on component unmount
+    return () => clearInterval(pollInterval)
+  }
+
+  // Toggle audio playback
+  const toggleAudio = () => {
+    if (!audioRef.current) return
+
+    if (isPlaying) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      audioRef.current.play()
+      setIsPlaying(true)
+    }
   }
 
   const handleFinishInterview = () => {
@@ -230,7 +410,7 @@ export default function InterviewDetailPage() {
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center">
-                      <span className="text-2xl font-bold">82%</span>
+                      <span className="text-2xl font-bold">{overallScore}%</span>
                     </div>
                     <span className="text-xs text-gray-400 mt-1">Overall Score</span>
                   </div>
@@ -245,18 +425,36 @@ export default function InterviewDetailPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div className="bg-gray-800 rounded-lg p-4">
                         <h4 className="text-sm font-medium mb-2">Technical Knowledge</h4>
-                        <Progress value={85} className="h-2 mb-2" />
-                        <p className="text-xs text-gray-400">Strong understanding of core concepts</p>
+                        <Progress value={Math.min(overallScore + 5, 100)} className="h-2 mb-2" />
+                        <p className="text-xs text-gray-400">
+                          {overallScore >= 80
+                            ? "Strong understanding of core concepts"
+                            : overallScore >= 60
+                              ? "Good grasp of fundamentals with some gaps"
+                              : "Basic understanding needs improvement"}
+                        </p>
                       </div>
                       <div className="bg-gray-800 rounded-lg p-4">
                         <h4 className="text-sm font-medium mb-2">Communication</h4>
-                        <Progress value={78} className="h-2 mb-2" />
-                        <p className="text-xs text-gray-400">Clear explanations with some room for improvement</p>
+                        <Progress value={Math.min(overallScore - 5, 100)} className="h-2 mb-2" />
+                        <p className="text-xs text-gray-400">
+                          {overallScore >= 80
+                            ? "Clear and concise explanations"
+                            : overallScore >= 60
+                              ? "Clear explanations with some room for improvement"
+                              : "Communication needs more structure and clarity"}
+                        </p>
                       </div>
                       <div className="bg-gray-800 rounded-lg p-4">
                         <h4 className="text-sm font-medium mb-2">Problem Solving</h4>
-                        <Progress value={80} className="h-2 mb-2" />
-                        <p className="text-xs text-gray-400">Good approach to breaking down problems</p>
+                        <Progress value={overallScore} className="h-2 mb-2" />
+                        <p className="text-xs text-gray-400">
+                          {overallScore >= 80
+                            ? "Excellent approach to breaking down problems"
+                            : overallScore >= 60
+                              ? "Good approach with some inefficiencies"
+                              : "Needs more structured problem-solving techniques"}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -264,41 +462,61 @@ export default function InterviewDetailPage() {
                   <div>
                     <h3 className="text-lg font-medium mb-4">Question Breakdown</h3>
                     <div className="space-y-4">
-                      {interview.questions.map((question, index) => (
-                        <Card key={index} className="bg-gray-800 border-gray-700">
-                          <CardHeader className="pb-2">
-                            <div className="flex justify-between">
-                              <CardTitle className="text-base">Question {index + 1}</CardTitle>
-                              <Badge
-                                className={
-                                  index % 2 === 0 ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-400"
-                                }
-                              >
-                                {index % 2 === 0 ? "Strong" : "Needs Work"}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-sm mb-2">{question}</p>
-                            <div className="bg-gray-900 rounded-lg p-3 mb-3">
-                              <p className="text-xs text-gray-400 mb-1">Your Answer:</p>
-                              <p className="text-sm">
-                                {index === 0
-                                  ? "React is a JavaScript library for building user interfaces. It uses a component-based architecture and a virtual DOM to efficiently update the UI."
-                                  : "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."}
-                              </p>
-                            </div>
-                            <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3">
-                              <p className="text-xs text-purple-400 mb-1">Feedback:</p>
-                              <p className="text-sm text-gray-300">
-                                {index % 2 === 0
-                                  ? "Great explanation! You covered the key concepts clearly. Consider also mentioning React's declarative nature and how it differs from imperative programming."
-                                  : "Your answer was on the right track, but could be more specific. Try to provide concrete examples and focus more on the core concepts."}
-                              </p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                      {interview.questions.map((question, index) => {
+                        const result = interviewResults[index] || {
+                          score: 0,
+                          feedback: "No feedback available",
+                          suggestions: [],
+                        }
+
+                        return (
+                          <Card key={index} className="bg-gray-800 border-gray-700">
+                            <CardHeader className="pb-2">
+                              <div className="flex justify-between">
+                                <CardTitle className="text-base">Question {index + 1}</CardTitle>
+                                <Badge
+                                  className={
+                                    result.score >= 80
+                                      ? "bg-green-500/20 text-green-400"
+                                      : result.score >= 60
+                                        ? "bg-amber-500/20 text-amber-400"
+                                        : "bg-red-500/20 text-red-400"
+                                  }
+                                >
+                                  {result.score >= 80 ? "Strong" : result.score >= 60 ? "Good" : "Needs Work"}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <p className="text-sm mb-2">{question}</p>
+                              <div className="bg-gray-900 rounded-lg p-3 mb-3">
+                                <p className="text-xs text-gray-400 mb-1">Your Answer:</p>
+                                <p className="text-sm">
+                                  {interview.answers && interview.answers[index]
+                                    ? interview.answers[index]
+                                    : "No answer recorded"}
+                                </p>
+                              </div>
+                              <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-3">
+                                <p className="text-xs text-purple-400 mb-1">Feedback:</p>
+                                <p className="text-sm text-gray-300">{result.feedback}</p>
+                                {result.suggestions && result.suggestions.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs text-purple-400 mb-1">Suggestions:</p>
+                                    <ul className="text-xs text-gray-300">
+                                      {result.suggestions.map((suggestion, i) => (
+                                        <li key={i} className="mb-1">
+                                          • {suggestion}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
@@ -308,9 +526,27 @@ export default function InterviewDetailPage() {
                   <div className="bg-gray-800 rounded-lg p-4">
                     <h3 className="font-medium mb-2">Areas for Improvement</h3>
                     <ul className="text-sm text-gray-400 space-y-1">
-                      <li>• Provide more concrete examples in your explanations</li>
-                      <li>• Deepen your knowledge of advanced React patterns</li>
-                      <li>• Practice explaining technical concepts more concisely</li>
+                      {overallScore < 80 && (
+                        <>
+                          <li>• Provide more concrete examples in your explanations</li>
+                          <li>• Deepen your knowledge of advanced concepts</li>
+                          <li>• Practice explaining technical concepts more concisely</li>
+                        </>
+                      )}
+                      {overallScore < 60 && (
+                        <>
+                          <li>• Focus on understanding core fundamentals</li>
+                          <li>• Structure your answers with clear beginning, middle, and end</li>
+                          <li>• Practice more with technical terminology</li>
+                        </>
+                      )}
+                      {overallScore >= 80 && (
+                        <>
+                          <li>• Continue to refine your communication skills</li>
+                          <li>• Consider exploring more advanced topics in {interview.techstack.join(", ")}</li>
+                          <li>• Practice explaining complex concepts to non-technical audiences</li>
+                        </>
+                      )}
                     </ul>
                   </div>
                   <Button
@@ -359,7 +595,22 @@ export default function InterviewDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-gray-800 rounded-lg p-4">
-                    <p className="text-lg">{interview.questions[currentQuestionIndex]}</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-lg">{interview.questions[currentQuestionIndex]}</p>
+                      {audioRef.current && (
+                        <Button variant="outline" size="sm" className="border-gray-700" onClick={toggleAudio}>
+                          {isPlaying ? (
+                            <>
+                              <VolumeX className="h-4 w-4 mr-1" /> Mute
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="h-4 w-4 mr-1" /> Listen
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -371,26 +622,39 @@ export default function InterviewDetailPage() {
                         variant="outline"
                         size="sm"
                         className={cn("border-gray-700", isRecording && "bg-red-500/20 text-red-400 border-red-500/50")}
-                        onClick={toggleRecording}
+                        onClick={isRecording ? endVapiCall : startVapiCall}
+                        disabled={isAnswering}
                       >
                         {isRecording ? (
                           <>
-                            <MicOff className="h-4 w-4 mr-1" /> Stop Recording
+                            <MicOff className="h-4 w-4 mr-1" /> Stop Interview
                           </>
                         ) : (
                           <>
-                            <Mic className="h-4 w-4 mr-1" /> Record Answer
+                            <Mic className="h-4 w-4 mr-1" /> Start Voice Interview
                           </>
                         )}
                       </Button>
                     </div>
+
+                    {isRecording && transcription && (
+                      <div className="bg-gray-800 border border-blue-500/30 rounded-lg p-3 mb-3">
+                        <p className="text-xs text-blue-400 mb-1">Live Transcription:</p>
+                        <p className="text-sm">{transcription}</p>
+                        <div className="flex items-center mt-2">
+                          <RefreshCw className="h-3 w-3 text-blue-400 animate-spin mr-1" />
+                          <span className="text-xs text-blue-400">Recording in progress...</span>
+                        </div>
+                      </div>
+                    )}
+
                     <Textarea
                       id="answer"
-                      placeholder="Type your answer here..."
+                      placeholder="Type your answer here or use voice interview..."
                       className="bg-gray-800 border-gray-700 focus:border-purple-500 min-h-32"
                       value={userAnswer}
                       onChange={(e) => setUserAnswer(e.target.value)}
-                      disabled={isAnswering}
+                      disabled={isAnswering || isRecording}
                     />
                   </div>
 
@@ -419,21 +683,19 @@ export default function InterviewDetailPage() {
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-300">
-                          {feedbackScore >= 80
-                            ? "Excellent answer! You demonstrated a strong understanding of the concept and provided clear explanations."
-                            : feedbackScore >= 60
-                              ? "Good answer with some room for improvement. Consider adding more specific examples and technical details."
-                              : "Your answer needs more work. Focus on the core concepts and try to be more specific in your explanation."}
-                        </p>
-                        <div className="mt-3 text-sm">
-                          <p className="font-medium text-purple-400 mb-1">Suggestions:</p>
-                          <ul className="text-gray-300 space-y-1">
-                            <li>• Mention how React's virtual DOM improves performance</li>
-                            <li>• Explain the component lifecycle in more detail</li>
-                            <li>• Compare React to other frameworks like Angular or Vue</li>
-                          </ul>
-                        </div>
+                        <p className="text-sm text-gray-300">{feedbackText}</p>
+                        {feedbackSuggestions.length > 0 && (
+                          <div className="mt-3 text-sm">
+                            <p className="font-medium text-purple-400 mb-1">Suggestions:</p>
+                            <ul className="text-gray-300 space-y-1">
+                              {feedbackSuggestions.map((suggestion, index) => (
+                                <li key={index} className="flex items-start">
+                                  <span className="mr-1">•</span> {suggestion}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -443,7 +705,7 @@ export default function InterviewDetailPage() {
                     variant="outline"
                     className="border-gray-700"
                     onClick={handlePreviousQuestion}
-                    disabled={currentQuestionIndex === 0 || isAnswering}
+                    disabled={currentQuestionIndex === 0 || isAnswering || isRecording}
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                   </Button>
@@ -451,7 +713,7 @@ export default function InterviewDetailPage() {
                     <Button
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                       onClick={handleNextQuestion}
-                      disabled={isAnswering}
+                      disabled={isAnswering || isRecording}
                     >
                       {currentQuestionIndex < interview.questions.length - 1 ? (
                         <>
@@ -467,7 +729,7 @@ export default function InterviewDetailPage() {
                     <Button
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                       onClick={handleSubmitAnswer}
-                      disabled={!userAnswer.trim() || isAnswering}
+                      disabled={!userAnswer.trim() || isAnswering || isRecording}
                     >
                       {isAnswering ? (
                         <div className="flex items-center">
