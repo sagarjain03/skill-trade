@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: [true, "Please provide a email"],
+        required: [true, "Please provide an email"],
         unique: true,
     },
     password: {
@@ -19,11 +19,11 @@ const userSchema = new mongoose.Schema({
         type: String,
         enum: ["Beginner", "D", "C", "B", "A", "S"],
         default: "Beginner",
-      },
+    },
     profilePic: {
         type: String,
         default: ""
-      },
+    },
     isVerified: {
         type: Boolean,
         default: false,
@@ -32,26 +32,26 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-
     skillsToTeach: {
         type: [String],
     },
     skillsToLearn: {    
         type: [String],
     },
-
     currentlyLearning: {
         type: String,
         default: "",
     },
-
-
-    
+    // New field to track whether the user is actively finding a match  
+    isFindingMatch: {
+        type: Boolean,
+        default: false,
+    },
     forgotPasswordToken: String,
     forgotPasswordTokenExpiry: Date,
     verifyToken: String,
     verifyTokenExpiry: Date,
-})
+});
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 

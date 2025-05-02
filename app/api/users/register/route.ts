@@ -32,11 +32,8 @@ export async function POST(request: NextRequest){
             password: hashedPassword,
             skillsToTeach,
             skillsToLearn,
-<<<<<<< HEAD
-            currentlyLearning
-=======
             currentlyLearning,
->>>>>>> a59e5a417e71a0feddb6ec011f756c7c60d3dff4
+
         })
 
         const savedUser = await newUser.save()
