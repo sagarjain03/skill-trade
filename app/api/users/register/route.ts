@@ -32,7 +32,10 @@ export async function POST(request: NextRequest){
             password: hashedPassword,
             skillsToTeach,
             skillsToLearn,
+
             currentlyLearning,
+
+
 
         })
 
