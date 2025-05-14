@@ -35,7 +35,7 @@ export default function MatchesPage() {
     })()
   }, [])
 
-  // Polling function: tries up to three times every 2 seconds (adjust as needed)
+  // Polling function: tries up to three times every 2 seconds.
   const pollForMatch = async () => {
     setPolling(true)
     setNoMatch(false)
@@ -49,15 +49,16 @@ export default function MatchesPage() {
           {},
           { withCredentials: true }
         )
+        // If a match object is returned, update state.
         if (response.data.success && response.data.match) {
           setMatchedUser(response.data.match)
           setShowMatch(true)
           setConfetti(true)
-          // Stop confetti after 3 seconds
           setTimeout(() => setConfetti(false), 3000)
           setPolling(false)
           return
         }
+        // Continue polling when no match yet available.
       } catch (e: any) {
         console.error("Polling error:", e.response?.data || e.message)
       }
@@ -68,9 +69,8 @@ export default function MatchesPage() {
     setNoMatch(true)
   }
 
-  // Handler when user clicks "Start Matching"
+  // Handler for "Start Matching" button click.
   const handleFindMatch = async () => {
-    // Optionally, ensure the user is marked as available again.
     try {
       await axios.patch(
         "/users/profile",
