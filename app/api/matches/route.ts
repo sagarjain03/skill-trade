@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/dbconfig/dbconfig"; // Updated to use connectDB, the correct named export
+import { connectDB } from "@/dbconfig/dbconfig";
 import User from "@/models/userModel";
 import { getDataFromToken } from "@/helpers/getDataFromToken";
 
@@ -24,9 +24,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Find a matching user:
-    // Condition: The other user must be active for matching,
-    // have a skillsToTeach array that includes the current user's currentlyLearning,
-    // and its currentlyLearning value is in the current user's skillsToTeach.
     const matchUser = await User.findOne({
       _id: { $ne: currentUser._id },
       isFindingMatch: true,
@@ -38,13 +35,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "No match found at the moment" }, { status: 200 });
     }
 
-    // Mark both users as no longer available for matching
+    // Set both users as matched and store mutual match details
     currentUser.isFindingMatch = false;
     matchUser.isFindingMatch = false;
+
+    // Save a simple matchedUser field (you may want to adjust your schema accordingly)
+    currentUser.matchedUser = { id: matchUser._id, username: matchUser.username };
+    matchUser.matchedUser = { id: currentUser._id, username: currentUser.username };
+
     await currentUser.save();
     await matchUser.save();
 
-    return NextResponse.json({ success: true, match: matchUser }, { status: 200 });
+    // Return the matched user information (for the caller, you can return either side)
+    return NextResponse.json({ success: true, match: currentUser.matchedUser }, { status: 200 });
   } catch (error) {
     console.error("Matching error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -13,52 +13,75 @@ import axios from "@/lib/axios"
 export default function MatchesPage() {
   const [showMatch, setShowMatch] = useState(false)
   const [confetti, setConfetti] = useState(false)
-  const [activeTab, setActiveTab] = useState("find")
   const [matchedUser, setMatchedUser] = useState<any>(null)
+  const [polling, setPolling] = useState(false)
+  const [noMatch, setNoMatch] = useState(false)
+  const [activeTab, setActiveTab] = useState("find")
 
   const currentUser = useAppSelector((state) => state.user.currentUser)
 
-  // When "find" is activated, update isFindingMatch and then post to the matches endpoint.
+  // On page mount, mark the user as available for matching.
   useEffect(() => {
-    if (activeTab === "find") {
-      (async function initAndFetchMatch() {
-        try {
-          // PATCH to update user profile so that isFindingMatch is true
-          await axios.patch(
-            "/users/profile",
-            { isFindingMatch: true },
-            { withCredentials: true }
-          )
+    (async function setFindingMatchTrue() {
+      try {
+        await axios.patch(
+          "/users/profile",
+          { isFindingMatch: true },
+          { withCredentials: true }
+        )
+      } catch (error: any) {
+        console.error("Error setting matching status:", error.response?.data || error.message)
+      }
+    })()
+  }, [])
 
-          // Wait longer to allow the DB update to propagate (e.g. 300ms)
-          await new Promise((res) => setTimeout(res, 300))
+  // Polling function: tries up to three times every 2 seconds (adjust as needed)
+  const pollForMatch = async () => {
+    setPolling(true)
+    setNoMatch(false)
+    const maxAttempts = 3
+    let attempt = 0
 
-          // POST request to search for a match
-          const response = await axios.post(
-            "/matches",
-            {},
-            { withCredentials: true }
-          )
-
-          if (response.data.success && response.data.match) {
-            setMatchedUser(response.data.match)
-            setShowMatch(true)
-            setConfetti(true)
-            setTimeout(() => setConfetti(false), 3000)
-          } else {
-            setShowMatch(false)
-            setMatchedUser(null)
-          }
-        } catch (error: any) {
-          console.error(
-            "Error in match workflow:",
-            error.response?.data || error.message
-          )
-          setShowMatch(false)
+    while (attempt < maxAttempts) {
+      try {
+        const response = await axios.post(
+          "/matches",
+          {},
+          { withCredentials: true }
+        )
+        if (response.data.success && response.data.match) {
+          setMatchedUser(response.data.match)
+          setShowMatch(true)
+          setConfetti(true)
+          // Stop confetti after 3 seconds
+          setTimeout(() => setConfetti(false), 3000)
+          setPolling(false)
+          return
         }
-      })()
+      } catch (e: any) {
+        console.error("Polling error:", e.response?.data || e.message)
+      }
+      attempt++
+      await new Promise((res) => setTimeout(res, 2000))
     }
-  }, [activeTab])
+    setPolling(false)
+    setNoMatch(true)
+  }
+
+  // Handler when user clicks "Start Matching"
+  const handleFindMatch = async () => {
+    // Optionally, ensure the user is marked as available again.
+    try {
+      await axios.patch(
+        "/users/profile",
+        { isFindingMatch: true },
+        { withCredentials: true }
+      )
+    } catch (e: any) {
+      console.error("Error updating matching status:", e.response?.data || e.message)
+    }
+    pollForMatch()
+  }
 
   const handleAcceptMatch = () => {
     console.log("Current user data:", currentUser)
@@ -111,7 +134,7 @@ export default function MatchesPage() {
                   Our matching system pairs users with complementary skills.
                   You teach what you know, and learn what you want.
                 </p>
-                {/* Dummy skills UI */}
+                {/* Dummy Skills UI */}
                 <div className="bg-gray-800 rounded-lg p-4">
                   <h3 className="font-medium mb-2">Skills You Can Teach</h3>
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -162,6 +185,7 @@ export default function MatchesPage() {
                       setActiveTab("find")
                       setShowMatch(false)
                       setMatchedUser(null)
+                      setNoMatch(false)
                     }}
                   >
                     Find Matches
@@ -177,11 +201,28 @@ export default function MatchesPage() {
                       setActiveTab("pending")
                       setShowMatch(false)
                       setMatchedUser(null)
+                      setNoMatch(false)
                     }}
                   >
                     Pending (3)
                   </Button>
                 </div>
+                {activeTab === "find" && (
+                  <div className="mt-4">
+                    <Button
+                      onClick={handleFindMatch}
+                      disabled={polling}
+                      className="w-full"
+                    >
+                      {polling ? "Searching for match..." : "Start Matching"}
+                    </Button>
+                    {noMatch && (
+                      <p className="mt-2 text-center text-red-400">
+                        No match available at the moment.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -225,9 +266,9 @@ export default function MatchesPage() {
                           {currentUser?.username?.substring(0, 2) || "YOU"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="absolute -bottom-1 -right-1 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold bg-gradient-to-br from-blue-500 to-blue-700">
-                        N/A
-                      </div>
+                      <p className="mt-1 text-center text-sm text-gray-300">
+                        {currentUser?.username}
+                      </p>
                     </div>
                     <div className="mx-4 text-center">
                       <div className="bg-gray-800 rounded-full px-3 py-1 text-xs font-medium mb-1">
@@ -240,45 +281,15 @@ export default function MatchesPage() {
                     </div>
                     <div className="relative">
                       <Avatar className="h-20 w-20 border-2 border-purple-500">
-                        <AvatarImage src="/placeholder.svg" alt={matchedUser.username || "Matched User"} />
+                        <AvatarImage src="/placeholder.svg" alt={matchedUser?.username || "Matched User"} />
                         <AvatarFallback className="bg-gray-700">
-                          {matchedUser.username ? matchedUser.username.substring(0, 2) : "NA"}
+                          {matchedUser?.username ? matchedUser.username.substring(0, 2) : "NA"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="absolute -bottom-1 -right-1 rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold bg-gradient-to-br from-purple-500 to-purple-700">
-                        N/A
-                      </div>
+                      <p className="mt-1 text-center text-sm text-gray-300">
+                        {matchedUser?.username}
+                      </p>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <h3 className="text-sm font-medium text-blue-400 mb-2">
-                        You'll Teach
-                      </h3>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge className="bg-blue-500/20 text-blue-400">
-                          React
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="bg-gray-800 rounded-lg p-3">
-                      <h3 className="text-sm font-medium text-purple-400 mb-2">
-                        You'll Learn
-                      </h3>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge className="bg-purple-500/20 text-purple-400">
-                          Python
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-gray-800 rounded-lg p-3 mb-4">
-                    <h3 className="text-sm font-medium mb-2">
-                      About {matchedUser.username || "User"}
-                    </h3>
-                    <p className="text-xs text-gray-400">
-                      No bio provided.
-                    </p>
                   </div>
                   <div className="flex space-x-3">
                     <Button
@@ -295,23 +306,11 @@ export default function MatchesPage() {
               </Card>
             ) : (
               <Card className="bg-gray-900 border-gray-800 h-full flex flex-col justify-center items-center p-8">
-                <div className="relative w-16 h-16 mb-4">
-                  <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping opacity-75"></div>
-                  <div className="relative flex items-center justify-center w-16 h-16 bg-gray-800 rounded-full">
-                    <Sparkles className="h-8 w-8 text-blue-400" />
-                  </div>
-                </div>
                 <h3 className="text-xl font-medium mb-2">
-                  Finding Matches...
+                  No Match Found Yet
                 </h3>
-                <p className="text-gray-400 text-center mb-4">
-                  We're looking for users with complementary skills to yours
-                </p>
-                <div className="w-full max-w-xs bg-gray-800 rounded-full h-2 mb-4">
-                  <div className="bg-blue-500 h-2 rounded-full animate-progress"></div>
-                </div>
-                <p className="text-xs text-gray-500">
-                  This usually takes less than a minute
+                <p className="text-gray-400 text-center">
+                  Click on "Start Matching" to search for a match.
                 </p>
               </Card>
             )
