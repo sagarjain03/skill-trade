@@ -26,9 +26,9 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${vapiApiKey}`,
       },
       body: JSON.stringify({
-        assistant_id: process.env.VAPI_ASSISTANT_ID || "interviewer", // Use default or configured assistant
+        assistant_id: process.env.VAPI_ASSISTANT_ID || "interviewer", 
         recipient: {
-          user_id: "user_" + Date.now(), // Generate a unique user ID
+          user_id: "user_" + Date.now(), 
         },
         metadata: {
           question,
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         config: {
           first_message: `I'll be conducting your ${type} interview for the ${role} position at ${level} level. Here's your question: ${question}`,
           wait_for_greeting: false,
-          end_call_after_silence: 3000, // End call after 3 seconds of silence
+          end_call_after_silence: 3000, 
           record_call: true,
         },
       }),

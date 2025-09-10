@@ -13,19 +13,17 @@ export async function POST(request: NextRequest) {
     const { content, tags } = await request.json();
     if (!content?.trim()) return NextResponse.json({ error: "Content required" }, { status: 400 });
 
-    // const newPost = new CommunityPost({ content, tags, user: userId });
-    // await newPost.save();
     const newPost = new CommunityPost({
       content,
       tags: tags || [],
       user: userId,
       likes: 0,
-      comments: [], // Initialize comments as an empty array
+      comments: [],
     });
     await newPost.save();
 
     const populatedPost = await CommunityPost.findById(newPost._id)
-      .populate("user", "username rank ");
+      .populate("user", "username rank");
 
     return NextResponse.json({ post: populatedPost }, { status: 201 });
   } catch (error: any) {
@@ -37,11 +35,7 @@ export async function GET() {
   try {
     const posts = await CommunityPost.find({})
       .populate("user", "username rank")
-<<<<<<< HEAD
-      .populate("comments.user", "username profilePic")
-=======
       .populate("comments.user", "username profilePic rank")
->>>>>>> a59e5a417e71a0feddb6ec011f756c7c60d3dff4
       .sort({ createdAt: -1 });
 
     return NextResponse.json({ posts });

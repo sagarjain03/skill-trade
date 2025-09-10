@@ -89,6 +89,7 @@ export default function CommunityPage() {
     try {
       const response = await axios.get("/api/users/profile");
       setCurrentUserId(response.data.user._id);
+      console.log(response.data.user)
     } catch (error) {
       console.error("Error fetching current user:", error);
     }
@@ -365,7 +366,7 @@ export default function CommunityPage() {
                       <Avatar
                         className={cn(
                           "h-8 w-8 mr-2 border",
-                          rankBorderColors[post.user.rank as keyof typeof rankBorderColors]
+                          rankBorderColors[post.user?.rank as keyof typeof rankBorderColors] || rankBorderColors.Beginner
                         )}
                       >
                         <AvatarImage src={post.user.profilePic || "/placeholder.svg"} alt={post.user.username} />
@@ -380,11 +381,7 @@ export default function CommunityPage() {
                               rankColors[post.user.rank as keyof typeof rankColors]
                             )}
                           >
-<<<<<<< HEAD
-                          {post.user?.rank?.substring(0, 2)} {/* Display the rank inside the circle */}
-=======
                             {post.user?.rank?.substring(0, 2)} {/* Display the rank inside the circle */}
->>>>>>> a59e5a417e71a0feddb6ec011f756c7c60d3dff4
                           </div>
                         </div>
                         <span className="text-xs text-gray-500">
